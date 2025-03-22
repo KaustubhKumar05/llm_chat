@@ -1,263 +1,167 @@
-from fastapi import FastAPI, WebSocket
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from cartesia import Cartesia
-import os
+import whisper
+import asyncio
 from dotenv import load_dotenv
+import os
+from constants import voice_embedding
 load_dotenv()
 
 app = FastAPI()
 
-client = Cartesia(api_key=os.getenv("CARTESIA_API_KEY", ""))
+class Connection:
+    """High-level class that manages Cartesia, Whisper, and frontend WebSocket connections."""
+    
+    def __init__(self):
+        self.cartesia = Cartesia(api_key=os.getenv("CARTESIA_API_KEY", ""))
+        self.whisper = whisper.load_model("base")
+        self.cartesia.tts.websocket()
+        print("debug> Connection established with Cartesia")
+        self.frontend_ws = None
+        self.is_connected = False
+        self.tts_chunking_limit = 15
+        self.voice_embedding = voice_embedding
+    
+    async def connect(self, websocket: WebSocket) -> None:
+        """Establish connection with frontend and initialize TTS service."""
+        await websocket.accept()
+        self.frontend_ws = websocket
+        self.is_connected = True
+        print("debug> Connection established with frontend")
+        
+    async def text_to_speech(self, text: str, voice_embedding: list) -> None:
+        """Process text-to-speech conversion and stream to frontend."""
+        if not self.is_connected:
+            raise RuntimeError("No active connection with frontend")
+            
+        try:
+            buffer = bytearray()
+            chunk_count = 0
+            model_id = "sonic-2"
+            
+            for output in self.tts_ws.send(
+                model_id=model_id,
+                transcript=text,
+                voice_embedding=voice_embedding,
+                stream=True,
+                output_format={
+                    "container": "raw",
+                    "encoding": "pcm_s16le",
+                    "sample_rate": 44100,
+                },
+            ):
+                buffer.extend(output["audio"])
+                chunk_count += 1
+
+                if chunk_count >= self.tts_chunking_limit:
+                    print("debug> Sending merged chunks")
+                    await self.frontend_ws.send_bytes(bytes(buffer))
+                    buffer.clear()
+                    chunk_count = 0
+
+            # Send any remaining data in the buffer
+            if buffer:
+                print("debug> Sending final merged chunks")
+                await self.frontend_ws.send_bytes(bytes(buffer))
+                
+        except Exception as e:
+            print(f"Cartesia streaming error: {e}")
+            # Recreate the TTS WebSocket connection if it fails
+            self.tts_ws = self.cartesia.tts.websocket()
+            
+    async def speech_to_text(self, audio_data: bytes) -> str:
+        """Process speech-to-text conversion using Whisper."""
+        try:
+            # Save audio data to a temporary file
+            temp_audio_path = "temp_audio.wav"
+            with open(temp_audio_path, "wb") as f:
+                f.write(audio_data)
+            
+            # Use Whisper to transcribe the audio
+            result = self.whisper.transcribe(temp_audio_path)
+            transcript = result["text"]
+            print("debug> Transcription results:", transcript)
+            return transcript
+            
+        except Exception as e:
+            print(f"Speech-to-text error: {e}")
+            return ""
+
+
+# Global connection instance
+connection = Connection()
+
+@app.websocket("/connect")
+async def connect_endpoint(websocket: WebSocket):
+    """Endpoint to establish connection with frontend."""
+    try:
+        await connection.connect(websocket)
+        
+        while True:
+            await websocket.send_json({"status": "connected"})
+            await asyncio.sleep(30)  # Heartbeat every 30 seconds
+            
+    except WebSocketDisconnect:
+        connection.is_connected = False
+        print("debug> Frontend disconnected")
+    except Exception as e:
+        connection.is_connected = False
+        print(f"Connection error: {e}")
 
 
 @app.websocket("/tts")
 async def text_to_speech_endpoint(websocket: WebSocket):
-    model_id = "sonic-2"
+    """Endpoint for text-to-speech conversion."""
     await websocket.accept()
-    tts_ws = client.tts.websocket()
-    print("debug> ws connection accepted")
-    # Create Cartesia WebSocket connection once
+    print("debug> TTS connection accepted")
+    
+    try:
+        while True:
+            text = await websocket.receive_text()
+
+            # Create a temporary connection if no global connection exists
+            if not connection.is_connected:
+                temp_connection = Connection()
+                await temp_connection.connect(websocket)
+                await temp_connection.text_to_speech(text)
+            else:
+                # Use the existing connection
+                connection.frontend_ws = websocket
+                await connection.text_to_speech(text)
+                
+    except Exception as e:
+        print(f"Error in TTS endpoint: {e}")
+    finally:
+        await websocket.close()
+
+
+@app.websocket("/stt")
+async def speech_to_text_endpoint(websocket: WebSocket):
+    """Endpoint for speech-to-text conversion."""
+    await websocket.accept()
+    print("debug> STT connection accepted")
+    
     try:
         while True:
             await websocket.send_json({"status": "ready"})
-            text = await websocket.receive_text()
-            # Stream audio chunks
-            try:
-                buffer = bytearray()
-                chunk_count = 0
-
-                for output in tts_ws.send(
-                    model_id=model_id,
-                    transcript=text,
-                    voice_embedding=[
-                        0.0004843357,
-                        0.010763298,
-                        0.0135844685,
-                        -0.017949576,
-                        0.006059871,
-                        -0.007065809,
-                        0.005042573,
-                        0.0055985125,
-                        0.0040849745,
-                        0.00017603082,
-                        0.006190922,
-                        0.002644834,
-                        -0.00270278,
-                        0.011997839,
-                        -0.00012651103,
-                        0.0027637072,
-                        -0.009781701,
-                        0.00865641,
-                        0.0007335072,
-                        0.011972326,
-                        0.002655015,
-                        -0.00018643413,
-                        -0.012661965,
-                        -0.0072832173,
-                        -0.0036828383,
-                        -0.00857706,
-                        0.0100550195,
-                        -0.013049273,
-                        -0.0017665722,
-                        -0.0065654796,
-                        0.0027691068,
-                        -0.015968125,
-                        -0.014092953,
-                        -0.011070702,
-                        0.002173436,
-                        -0.0054460806,
-                        0.0036378424,
-                        -0.0029909196,
-                        -0.0052131894,
-                        -0.006633156,
-                        -0.0071412823,
-                        -0.011117058,
-                        0.011294153,
-                        -0.0038204368,
-                        -0.016610146,
-                        -0.0047511896,
-                        -0.0055412496,
-                        0.009917765,
-                        0.0065321154,
-                        0.010868768,
-                        -0.006307507,
-                        -0.0073603094,
-                        -0.0040328163,
-                        0.0010743195,
-                        0.02111428,
-                        0.0007071891,
-                        -0.012727761,
-                        -0.014897293,
-                        0.0120393,
-                        0.0009407541,
-                        -0.0016072674,
-                        0.0018975061,
-                        -0.0018361856,
-                        0.0037015195,
-                        -0.007362746,
-                        0.009826227,
-                        0.009210562,
-                        0.01603462,
-                        -0.0040682913,
-                        0.0056241276,
-                        -0.00012875171,
-                        -0.024529664,
-                        0.016728196,
-                        -0.0075605274,
-                        0.0053065848,
-                        -0.0002527688,
-                        0.012280651,
-                        -0.0006555727,
-                        -0.009269543,
-                        0.0031629512,
-                        0.0010738261,
-                        -0.009085186,
-                        0.0031257144,
-                        0.0092447195,
-                        0.018355919,
-                        -0.0024547055,
-                        0.013272141,
-                        0.007866376,
-                        0.009436996,
-                        -0.0053247437,
-                        -0.002428213,
-                        -0.0012330556,
-                        0.004549788,
-                        -0.006254721,
-                        0.013876595,
-                        -0.007099994,
-                        0.010353005,
-                        -0.011603749,
-                        -0.004651725,
-                        0.0077238483,
-                        0.0063883243,
-                        0.0014671343,
-                        -0.0098537225,
-                        -0.0027268424,
-                        -0.0023854012,
-                        0.009721582,
-                        0.0014110485,
-                        0.006112216,
-                        0.0010270389,
-                        0.005012873,
-                        -0.010092998,
-                        -0.012633333,
-                        0.000018669114,
-                        0.018341742,
-                        -0.002375906,
-                        0.012418233,
-                        0.009655696,
-                        -0.008831964,
-                        0.015158456,
-                        -0.004044919,
-                        -0.0022163445,
-                        0.00003770204,
-                        0.012633304,
-                        0.0040320167,
-                        -0.008277419,
-                        -0.0062187575,
-                        0.0029618866,
-                        -0.011352457,
-                        0.0019589332,
-                        -0.0027121194,
-                        -0.002312915,
-                        -0.007888902,
-                        0.0023735208,
-                        -0.01481767,
-                        0.0007799664,
-                        -0.0054217945,
-                        0.00096138974,
-                        -0.0038950928,
-                        -0.023846464,
-                        -0.009337086,
-                        0.00040726282,
-                        0.0012698306,
-                        -0.0010730405,
-                        -0.009329432,
-                        0.003080148,
-                        0.00096420245,
-                        0.0115799215,
-                        0.0010867448,
-                        0.00294934,
-                        0.021737717,
-                        0.0016282172,
-                        0.0028794587,
-                        0.0021114778,
-                        0.0022701889,
-                        0.0010185562,
-                        0.0019523393,
-                        0.01441916,
-                        0.009813796,
-                        0.022364663,
-                        0.012246677,
-                        0.0031218075,
-                        -0.013614485,
-                        0.005446288,
-                        0.0017298888,
-                        -0.014607491,
-                        0.0057560755,
-                        0.007932241,
-                        -0.014197458,
-                        -0.007278241,
-                        -0.018437989,
-                        -0.0066711474,
-                        -0.018618815,
-                        -0.012192206,
-                        -0.0028210727,
-                        0.0034327726,
-                        -0.01273614,
-                        -0.008374823,
-                        -0.005808041,
-                        -0.0028053012,
-                        -0.017687995,
-                        0.013866231,
-                        -0.004516129,
-                        -0.007269416,
-                        0.0052399836,
-                        0.0029987935,
-                        0.0013707977,
-                        -0.004739649,
-                        -0.014692301,
-                        0.0108625265,
-                        -0.0062770015,
-                        -0.0083151525,
-                        0.00041140072,
-                    ],
-                    stream=True,
-                    output_format={
-                        "container": "raw",
-                        "encoding": "pcm_s16le",
-                        "sample_rate": 44100,
-                    },
-                ):
-                    buffer.extend(output["audio"])
-                    chunk_count += 1
-
-                    # Send merged chunks every 20 messages
-                    if chunk_count >= 20:
-                        print("debug> Sending merged chunks")
-                        await websocket.send_bytes(bytes(buffer))
-                        buffer.clear()
-                        chunk_count = 0
-
-                # Send any remaining data in the buffer
-                if buffer:
-                    print("debug> Sending final merged chunks")
-                    await websocket.send_bytes(bytes(buffer))
-
-            except Exception as e:
-                print(f"Cartesia streaming error: {e}")
-                # Recreate the WebSocket connection if it fails
-                tts_ws = client.tts.websocket()
-                continue
-
+            audio_data = await websocket.receive_bytes()
+            
+            # Create a temporary connection if no global connection exists
+            if not connection.is_connected:
+                temp_connection = Connection(api_key="sk_car_Iuues1LsztkZl7bfCjghR")
+                transcript = await temp_connection.speech_to_text(audio_data)
+            else:
+                # Use the existing connection
+                transcript = await connection.speech_to_text(audio_data)
+                
+            await websocket.send_json({"transcript": transcript})
+                
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Error in STT endpoint: {e}")
     finally:
-        tts_ws.close()
         await websocket.close()
 
 
 if __name__ == "__main__":
     import uvicorn
-
     uvicorn.run(app, host="0.0.0.0", port=8000)
