@@ -1,7 +1,7 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from cartesia import Cartesia
-import whisper
-import asyncio
+# import whisper
+from typing import Dict, Any
 from dotenv import load_dotenv
 import os
 from constants import voice_embedding
@@ -10,11 +10,12 @@ load_dotenv()
 app = FastAPI()
 
 class Connection:
-    """High-level class that manages Cartesia, Whisper, and frontend WebSocket connections."""
+    """High-level class that manages Cartesia, Whisper, and frontend WebSocket connection."""
     
     def __init__(self):
         self.cartesia = Cartesia(api_key=os.getenv("CARTESIA_API_KEY", ""))
-        self.whisper = whisper.load_model("base")
+        # self.whisper = whisper.load_model("base")
+        self.whisper = None
         self.cartesia.tts.websocket()
         print("debug> Connection established with Cartesia")
         self.frontend_ws = None
@@ -23,26 +24,57 @@ class Connection:
         self.voice_embedding = voice_embedding
     
     async def connect(self, websocket: WebSocket) -> None:
-        """Establish connection with frontend and initialize TTS service."""
+        """Initialize connection with frontend."""
         await websocket.accept()
         self.frontend_ws = websocket
         self.is_connected = True
         print("debug> Connection established with frontend")
         
-    async def text_to_speech(self, text: str, voice_embedding: list) -> None:
-        """Process text-to-speech conversion and stream to frontend."""
+    async def handle_message(self, message: Dict[str, Any]) -> None:
+        """Handle messages from frontend and route to appropriate service."""
         if not self.is_connected:
             raise RuntimeError("No active connection with frontend")
             
+        message_type = message.get("type")
+        
+        # Handle text-to-speech request
+        if message_type == "tts":
+            text = message.get("text", "")
+            if text:
+                await self.process_tts(text)
+        
+        # Handle speech-to-text request
+        elif message_type == "stt":
+            audio_data = message.get("audio")
+            if audio_data:
+                transcript = await self.process_stt(audio_data)
+                await self.frontend_ws.send_json({
+                    "type": "stt_response",
+                    "transcript": transcript
+                })
+        # Unknown message type
+        else:
+            await self.frontend_ws.send_json({
+                "type": "error",
+                "message": f"Unknown message type: {message_type}"
+            })
+    
+    async def process_tts(self, text: str) -> None:
+        """Process text-to-speech conversion and stream to frontend."""
         try:
             buffer = bytearray()
             chunk_count = 0
             model_id = "sonic-2"
             
+            await self.frontend_ws.send_json({
+                "type": "tts_start",
+                "message": "Starting TTS processing"
+            })
+            
             for output in self.tts_ws.send(
                 model_id=model_id,
                 transcript=text,
-                voice_embedding=voice_embedding,
+                voice_embedding=self.voice_embedding,
                 stream=True,
                 output_format={
                     "container": "raw",
@@ -53,8 +85,12 @@ class Connection:
                 buffer.extend(output["audio"])
                 chunk_count += 1
 
+                # The audio and pauses sound weird without any merging
                 if chunk_count >= self.tts_chunking_limit:
                     print("debug> Sending merged chunks")
+                    await self.frontend_ws.send_json({
+                        "type": "tts_chunk"
+                    })
                     await self.frontend_ws.send_bytes(bytes(buffer))
                     buffer.clear()
                     chunk_count = 0
@@ -62,14 +98,27 @@ class Connection:
             # Send any remaining data in the buffer
             if buffer:
                 print("debug> Sending final merged chunks")
+                await self.frontend_ws.send_json({
+                    "type": "tts_chunk_final"
+                })
                 await self.frontend_ws.send_bytes(bytes(buffer))
+                
+            # Let frontend know TTS is complete
+            await self.frontend_ws.send_json({
+                "type": "tts_complete",
+                "message": "TTS processing complete"
+            })
                 
         except Exception as e:
             print(f"Cartesia streaming error: {e}")
             # Recreate the TTS WebSocket connection if it fails
             self.tts_ws = self.cartesia.tts.websocket()
+            await self.frontend_ws.send_json({
+                "type": "error",
+                "message": f"TTS error: {str(e)}"
+            })
             
-    async def speech_to_text(self, audio_data: bytes) -> str:
+    async def process_stt(self, audio_data: bytes) -> str:
         """Process speech-to-text conversion using Whisper."""
         try:
             # Save audio data to a temporary file
@@ -77,7 +126,6 @@ class Connection:
             with open(temp_audio_path, "wb") as f:
                 f.write(audio_data)
             
-            # Use Whisper to transcribe the audio
             result = self.whisper.transcribe(temp_audio_path)
             transcript = result["text"]
             print("debug> Transcription results:", transcript)
@@ -93,13 +141,18 @@ connection = Connection()
 
 @app.websocket("/connect")
 async def connect_endpoint(websocket: WebSocket):
-    """Endpoint to establish connection with frontend."""
+    """Single WebSocket endpoint that handles all communication with frontend."""
     try:
         await connection.connect(websocket)
         
+        await websocket.send_json({
+            "type": "connection_established",
+            "message": "Connection established"
+        })
+        
         while True:
-            await websocket.send_json({"status": "connected"})
-            await asyncio.sleep(30)  # Heartbeat every 30 seconds
+            message = await websocket.receive_json()
+            await connection.handle_message(message)
             
     except WebSocketDisconnect:
         connection.is_connected = False
@@ -107,59 +160,6 @@ async def connect_endpoint(websocket: WebSocket):
     except Exception as e:
         connection.is_connected = False
         print(f"Connection error: {e}")
-
-
-@app.websocket("/tts")
-async def text_to_speech_endpoint(websocket: WebSocket):
-    """Endpoint for text-to-speech conversion."""
-    await websocket.accept()
-    print("debug> TTS connection accepted")
-    
-    try:
-        while True:
-            text = await websocket.receive_text()
-
-            # Create a temporary connection if no global connection exists
-            if not connection.is_connected:
-                temp_connection = Connection()
-                await temp_connection.connect(websocket)
-                await temp_connection.text_to_speech(text)
-            else:
-                # Use the existing connection
-                connection.frontend_ws = websocket
-                await connection.text_to_speech(text)
-                
-    except Exception as e:
-        print(f"Error in TTS endpoint: {e}")
-    finally:
-        await websocket.close()
-
-
-@app.websocket("/stt")
-async def speech_to_text_endpoint(websocket: WebSocket):
-    """Endpoint for speech-to-text conversion."""
-    await websocket.accept()
-    print("debug> STT connection accepted")
-    
-    try:
-        while True:
-            await websocket.send_json({"status": "ready"})
-            audio_data = await websocket.receive_bytes()
-            
-            # Create a temporary connection if no global connection exists
-            if not connection.is_connected:
-                temp_connection = Connection(api_key="sk_car_Iuues1LsztkZl7bfCjghR")
-                transcript = await temp_connection.speech_to_text(audio_data)
-            else:
-                # Use the existing connection
-                transcript = await connection.speech_to_text(audio_data)
-                
-            await websocket.send_json({"transcript": transcript})
-                
-    except Exception as e:
-        print(f"Error in STT endpoint: {e}")
-    finally:
-        await websocket.close()
 
 
 if __name__ == "__main__":

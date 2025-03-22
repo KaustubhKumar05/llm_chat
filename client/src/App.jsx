@@ -110,7 +110,6 @@ function App() {
     // When this audio finishes, wait for the gap delay then play the next one
     source.onended = () => {
       console.log(`debug> Audio playback ended`);
-
       playNextInQueue();
     };
   };
@@ -129,7 +128,7 @@ function App() {
           const content = inputRef.current.value.trim();
           if (content && ws && ws.readyState === 1) {
             console.log("debug> Sending ws message");
-            ws.send(content);
+            ws.send(JSON.stringify({type: "tts", text: content}));
           }
         }}
       >
