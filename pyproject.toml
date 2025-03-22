@@ -5,5 +5,8 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    
+    "cartesia>=1.4.0",
+    "fastapi>=0.115.11",
+    "pyaudio>=0.2.14",
+    "uvicorn>=0.34.0",
 ]
