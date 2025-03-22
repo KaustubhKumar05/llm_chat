@@ -8,5 +8,6 @@ dependencies = [
     "cartesia>=1.4.0",
     "fastapi>=0.115.11",
     "pyaudio>=0.2.14",
+    "python-dotenv>=1.0.1",
     "uvicorn>=0.34.0",
 ]
