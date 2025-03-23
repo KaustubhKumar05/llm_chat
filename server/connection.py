@@ -119,6 +119,7 @@ class Connection:
                 model_id=self.model_id,
                 transcript=text,
                 voice_embedding=self.voice_embedding,
+                _experimental_voice_controls={"speed": "normal", "emotion": ["positivity:high"]},
                 stream=True,
                 output_format={
                     "container": "raw",

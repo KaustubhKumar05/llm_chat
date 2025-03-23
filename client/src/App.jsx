@@ -170,7 +170,6 @@ function App() {
         JSON.stringify({
           type: "audio",
           final: true,
-          audio: {},
           uuid: uuidRef.current,
         })
       );
