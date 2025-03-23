@@ -8,7 +8,7 @@ uvicorn main:app --reload
 
 ### TODO:
 
-- [ ] Connection and TTS classes
-- [ ] OAI integration
+- [x] Connection and TTS classes
+- [ ] OAI integration - realtime to text
 - [ ] Scripting, agenda endpoint
-- [ ] Phone support? 
+- [ ] Logging, analytics

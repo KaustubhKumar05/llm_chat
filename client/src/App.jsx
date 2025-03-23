@@ -7,6 +7,9 @@ function App() {
   const audioQueueRef = useRef([]);
   const isPlayingRef = useRef(false);
   const [ws, setWs] = useState(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const mediaRecorderRef = useRef(null);
+  const uuidRef = useRef(null);
 
   useEffect(() => {
     // Create audio context once
@@ -64,6 +67,9 @@ function App() {
         if (!isPlayingRef.current) {
           playNextInQueue();
         }
+      } else if (JSON.parse(event.data)?.type === "uuid") {
+        uuidRef.current = JSON.parse(event.data)?.uuid || "";
+        return;
       } else {
         // Handle text/JSON messages
         console.log("debug> Receiving server message:", event.data);
@@ -77,7 +83,6 @@ function App() {
     };
 
     return () => {
-      console.log("debug> Closing ws");
       if (socket.readyState === WebSocket.OPEN) {
         socket.close();
       }
@@ -104,14 +109,61 @@ function App() {
     source.buffer = audioBuffer;
     source.connect(audioContext.destination);
 
-    console.log("debug> Playing audio from queue");
     source.start();
 
     // When this audio finishes, wait for the gap delay then play the next one
     source.onended = () => {
-      console.log(`debug> Audio playback ended`);
       playNextInQueue();
     };
+  };
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+
+      mediaRecorder.ondataavailable = async (event) => {
+        if (event.data.size > 0 && ws?.readyState === WebSocket.OPEN) {
+          // Convert blob to base64
+          const buffer = await event.data.arrayBuffer();
+          const base64Data = btoa(
+            String.fromCharCode(...new Uint8Array(buffer))
+          );
+
+          ws.send(
+            JSON.stringify({
+              type: "audio",
+              audio: `data:audio/mp3;base64,${base64Data}`,
+              uuid: uuidRef.current,
+            })
+          );
+        }
+      };
+
+      mediaRecorder.start(100); // Collect data every 100ms
+      setIsRecording(true);
+    } catch (error) {
+      console.error("Error accessing microphone:", error);
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      mediaRecorderRef.current.stream
+        .getTracks()
+        .forEach((track) => track.stop());
+      setIsRecording(false);
+      ws.send(
+        JSON.stringify({
+          type: "audio",
+          final: true,
+          audio: {},
+          uuid: uuidRef.current,
+        })
+      );
+    }
   };
 
   return (
@@ -128,11 +180,26 @@ function App() {
           const content = inputRef.current.value.trim();
           if (content && ws && ws.readyState === 1) {
             console.log("debug> Sending ws message");
-            ws.send(JSON.stringify({type: "tts", text: content}));
+            ws.send(JSON.stringify({ type: "text", text: content }));
           }
         }}
       >
         Send
+      </button>
+
+      <button
+        className={`${
+          isRecording ? "bg-red-600" : "bg-gray-800"
+        } text-white w-max px-2 py-1 rounded mx-auto`}
+        onClick={() => {
+          if (isRecording) {
+            stopRecording();
+          } else {
+            startRecording();
+          }
+        }}
+      >
+        {isRecording ? "Stop Recording" : "Start Recording"}
       </button>
     </div>
   );
