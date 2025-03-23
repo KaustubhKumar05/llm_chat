@@ -50,22 +50,26 @@ class Connection:
         self.logger.debug("Received message from frontend: %s", message)
         message_type = message.get("type")
         uuid = message.get("uuid")
-        self.user_identifier_map[uuid] = +1
 
         if message_type == "text":
+            self._increment_uuid_counter(uuid)
+            
             text = message.get("text", "")
+            print("text received", text)
             if text:
                 resp = self.llm.generate_response(text, "")
+                print("response received", resp)
                 await self.stream_as_audio_response(resp["response"])
                 await self.frontend_ws.send_json(
                     {"type": "transcript_item", "transcript_item": resp}
                 )
 
         elif message_type == "audio":
+            self._increment_uuid_counter(uuid)
             count = self.user_identifier_map[uuid]
             file_name = f"media/{uuid}-{count}.mp3"
             audio_data = message.get("audio")
-            self.logger.debug("Audio data received: %s", audio_data)
+            print("Audio data received", audio_data, f"{file_name=} {audio_data=} {count=}")
             if audio_data:
                 base64_data = (
                     audio_data.split("base64,")[1]
@@ -74,6 +78,7 @@ class Connection:
                 )
                 decoded_audio = base64.b64decode(base64_data)
                 self.audio_buffer.extend(decoded_audio)
+
             if message.get("final", False):
                 with open(file_name, "wb") as f:
                     f.write(bytes(self.audio_buffer))
@@ -84,6 +89,7 @@ class Connection:
                     "",
                     file_name,
                 )
+                print("response received", resp, f"{file_name=}")
                 await self.stream_as_audio_response(resp["response"])
                 await self.frontend_ws.send_json(
                     {"type": "transcript_item", "transcript_item": resp}
@@ -147,3 +153,9 @@ class Connection:
     async def process_stt(self, audio_data: bytes) -> str:
         """Process speech-to-text conversion."""
         pass
+
+    def _increment_uuid_counter(self, uuid: str):
+        if uuid not in self.user_identifier_map:
+                self.user_identifier_map[uuid] = 0
+        self.user_identifier_map[uuid] += 1
+
