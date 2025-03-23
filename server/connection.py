@@ -53,7 +53,7 @@ class Connection:
 
         if message_type == "text":
             self._increment_uuid_counter(uuid)
-            
+
             text = message.get("text", "")
             print("text received", text)
             if text:
@@ -67,9 +67,13 @@ class Connection:
         elif message_type == "audio":
             self._increment_uuid_counter(uuid)
             count = self.user_identifier_map[uuid]
-            file_name = f"media/{uuid}-{count}.mp3"
+            file_name = f"media/{count}.mp3"
             audio_data = message.get("audio")
-            print("Audio data received", audio_data, f"{file_name=} {audio_data=} {count=}")
+            print(
+                "Audio data received",
+                audio_data,
+                f"{file_name=} {audio_data=} {count=}",
+            )
             if audio_data:
                 base64_data = (
                     audio_data.split("base64,")[1]
@@ -84,16 +88,17 @@ class Connection:
                     f.write(bytes(self.audio_buffer))
                 self.logger.debug("Saved audio file as %s", file_name)
 
-                self.audio_buffer.clear()
                 resp = self.llm.generate_response(
                     "",
                     file_name,
                 )
+
                 print("response received", resp, f"{file_name=}")
                 await self.stream_as_audio_response(resp["response"])
                 await self.frontend_ws.send_json(
                     {"type": "transcript_item", "transcript_item": resp}
                 )
+                self.audio_buffer = bytearray()
 
         else:
             await self.frontend_ws.send_json(
@@ -156,6 +161,5 @@ class Connection:
 
     def _increment_uuid_counter(self, uuid: str):
         if uuid not in self.user_identifier_map:
-                self.user_identifier_map[uuid] = 0
+            self.user_identifier_map[uuid] = 0
         self.user_identifier_map[uuid] += 1
-
