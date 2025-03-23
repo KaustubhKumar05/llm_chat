@@ -63,7 +63,7 @@ class Connection:
 
         elif message_type == "audio":
             count = self.user_identifier_map[uuid]
-            file_name = f"{uuid}-{count}.mp3"
+            file_name = f"media/{uuid}-{count}.mp3"
             audio_data = message.get("audio")
             self.logger.debug("Audio data received: %s", audio_data)
             if audio_data:
