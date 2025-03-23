@@ -9,6 +9,7 @@ uvicorn main:app --reload
 ### TODO:
 
 - [x] Connection and TTS classes
-- [ ] OAI integration - realtime to text
+- [x] Gemini integration - realtime to text
+- [ ] Transcripts
 - [ ] Scripting, agenda endpoint
 - [ ] Logging, analytics

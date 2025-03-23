@@ -1,7 +1,9 @@
 # FE setup
 
 ### TODO:
-- [ ] STT
+- [x] STT
+- [ ] UI update
+- [ ] Refactor
 - [ ] Transcripts, context 
 
 
