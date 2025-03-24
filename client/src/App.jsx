@@ -9,6 +9,7 @@ function App() {
   const isPlayingRef = useRef(false);
   const [ws, setWs] = useState(null);
   const [isRecording, setIsRecording] = useState(false);
+  const continueRecordingRef = useRef(true);
   const [chatMessages, setChatMessages] = useState([]);
   const mediaRecorderRef = useRef(null);
   const uuidRef = useRef(null);
@@ -18,7 +19,6 @@ function App() {
     audioContextRef.current = new (window.AudioContext ||
       window.webkitAudioContext)();
 
-    console.log("debug> Creating ws connection");
     const socket = new WebSocket(WS_ENDPOINT);
 
     socket.onerror = (error) => {
@@ -37,7 +37,6 @@ function App() {
     socket.onmessage = async (event) => {
       if (event.data instanceof Blob) {
         // Handle PCM audio data
-        console.log("debug> Receiving audio data");
         const audioData = await event.data.arrayBuffer();
 
         // Convert PCM data to audio buffer
@@ -141,6 +140,10 @@ function App() {
           const base64Data = btoa(
             String.fromCharCode(...new Uint8Array(buffer))
           );
+          // Needed to prevent a race condition where the final message is sent before the final audio chunk
+          if (!continueRecordingRef.current) {
+            return;
+          }
 
           ws.send(
             JSON.stringify({
@@ -166,6 +169,9 @@ function App() {
         .getTracks()
         .forEach((track) => track.stop());
       setIsRecording(false);
+
+      continueRecordingRef.current = false;
+
       ws.send(
         JSON.stringify({
           type: "audio",
@@ -173,6 +179,10 @@ function App() {
           uuid: uuidRef.current,
         })
       );
+      // Ideally this should happen after the model responds
+      setTimeout(() => {
+        continueRecordingRef.current = true;
+      }, 2000);
     }
   };
 
@@ -208,7 +218,6 @@ function App() {
           onClick={() => {
             const content = inputRef.current.value.trim();
             if (content && ws && ws.readyState === 1) {
-              console.log("debug> Sending ws message");
               ws.send(JSON.stringify({ type: "text", text: content }));
               inputRef.current.value = "";
             }

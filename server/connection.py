@@ -67,7 +67,7 @@ class Connection:
         elif message_type == "audio":
             self._increment_uuid_counter(uuid)
             count = self.user_identifier_map[uuid]
-            file_name = f"media/{count}.mp3"
+            file_name = f"media/{count}-{uuid}.mp3"
             audio_data = message.get("audio")
             print(
                 "Audio data received",
@@ -87,7 +87,7 @@ class Connection:
                 with open(file_name, "wb") as f:
                     f.write(bytes(self.audio_buffer))
                 self.logger.debug("Saved audio file as %s", file_name)
-
+                self.audio_buffer.clear()
                 resp = self.llm.generate_response(
                     "",
                     file_name,
@@ -98,7 +98,6 @@ class Connection:
                 await self.frontend_ws.send_json(
                     {"type": "transcript_item", "transcript_item": resp}
                 )
-                self.audio_buffer = bytearray()
 
         else:
             await self.frontend_ws.send_json(
@@ -119,7 +118,6 @@ class Connection:
                 model_id=self.model_id,
                 transcript=text,
                 voice_embedding=self.voice_embedding,
-                _experimental_voice_controls={"speed": "normal", "emotion": ["positivity:high"]},
                 stream=True,
                 output_format={
                     "container": "raw",
