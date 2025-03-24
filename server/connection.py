@@ -119,6 +119,7 @@ class Connection:
                 transcript=text,
                 voice_embedding=self.voice_embedding,
                 stream=True,
+                _experimental_voice_controls={"emotion": ["positivity:highest"]},
                 output_format={
                     "container": "raw",
                     "encoding": "pcm_s16le",

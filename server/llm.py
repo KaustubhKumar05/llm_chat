@@ -29,7 +29,7 @@ class GeminiLLM(LLM):
         self.client = genai.Client()
         self.logger = logging.getLogger(self.__class__.__name__)
         # Could vary based on the model/provider. Keeping it here for now
-        self.prompt_prefix = "Briefly respond to query in the audio or text. Use the following schema: {'query': <the query verbatim>, 'response': <your response>}"
+        self.prompt_prefix = "Cheerfully respond to query in the audio or text. Use the following schema: {'query': <the query verbatim>, 'response': <your response>}"
 
     def generate_response(self, prompt: str, audio_path: Optional[str]) -> str:
         try:
