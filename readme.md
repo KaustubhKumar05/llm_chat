@@ -9,3 +9,5 @@
 
 - [ ] Hosting, CI/CD
 - [ ] Cost, latency optimisations
+
+Iterate

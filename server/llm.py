@@ -5,6 +5,7 @@ import logging
 import json
 from pydantic import BaseModel
 
+
 class TranscriptItem(BaseModel):
     query: str
     response: str
@@ -31,13 +32,13 @@ class GeminiLLM(LLM):
         # Could vary based on the model/provider. Keeping it here for now
         self.prompt_prefix = "Cheerfully respond to query in the audio or text. Use the following schema: {'query': <the query verbatim>, 'response': <your response>}"
 
-    def generate_response(self, prompt: str, audio_path: Optional[str]) -> str:
+    def generate_response(self, prompt: str, audio_path: Optional[str]) -> dict:
         try:
             audio_file = ""
             if audio_path:
                 audio_file = self.client.files.upload(file=audio_path)
                 self.logger.debug("Uploaded audio file: %s", audio_file)
-            
+
             response = self.client.models.generate_content(
                 model=self.model_name,
                 contents=[(self.prompt_prefix + prompt), audio_file],
@@ -52,6 +53,7 @@ class GeminiLLM(LLM):
             )
 
             jsonresp = json.loads(response.text)
+            print(jsonresp)
             return jsonresp
         except Exception as e:
             self.logger.error("Error in generate_response: %s", str(e))

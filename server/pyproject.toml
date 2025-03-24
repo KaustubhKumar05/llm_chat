@@ -9,6 +9,7 @@ dependencies = [
     "fastapi>=0.115.11",
     "google-genai>=1.7.0",
     "python-dotenv>=1.0.1",
+    "redis>=5.2.1",
     "uuid>=1.30",
     "uvicorn>=0.34.0",
 ]

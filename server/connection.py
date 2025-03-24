@@ -1,16 +1,16 @@
 from cartesia import Cartesia
+from db_manager import DBManager
+from llm import GeminiLLM
 import os
 from typing import Dict, Any
 from fastapi import WebSocket
 from config import config
 from dotenv import load_dotenv
-from llm import GeminiLLM
 import uuid
 import base64
 import logging
 
 load_dotenv()
-
 
 class Connection:
     """High-level class that manages Cartesia, LLMs, and frontend WebSocket connection."""
@@ -27,8 +27,10 @@ class Connection:
         self.tts_chunking_limit = config["tts_chunking_limit"]
 
         self.llm = GeminiLLM()
-        self.audio_buffer = bytearray()
+        
+        self.db = DBManager()
 
+        self.audio_buffer = bytearray()
         # ID to count map to keep track of each audio message
         self.user_identifier_map = {}
 
@@ -98,6 +100,10 @@ class Connection:
                 await self.frontend_ws.send_json(
                     {"type": "transcript_item", "transcript_item": resp}
                 )
+                
+                self.db.append_transcript(uuid, {"query": resp["query"], "response": resp["query"]})
+                # if resp["context"]:
+                #     self.db.append_context(uuid, resp["context"])
 
         else:
             await self.frontend_ws.send_json(
