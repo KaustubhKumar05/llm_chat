@@ -37,9 +37,14 @@ class GeminiLLM(LLM):
             if audio_path:
                 audio_file = self.client.files.upload(file=audio_path)
                 self.logger.debug("Uploaded audio file: %s", audio_file)
+            
             response = self.client.models.generate_content(
                 model=self.model_name,
                 contents=[(self.prompt_prefix + prompt), audio_file],
+                # Pass system instruction
+                # Provide past messages in the chat for context
+                # Cache the conversation structure
+                # Get checklist of required details each time, store as context
                 config={
                     "response_mime_type": "application/json",
                     "response_schema": TranscriptItem,

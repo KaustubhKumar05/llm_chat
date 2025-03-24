@@ -10,6 +10,7 @@ uvicorn main:app --reload
 
 - [x] Connection and TTS classes
 - [x] Gemini integration - realtime to text
-- [ ] Transcripts
+- [x] Transcripts
+- [ ] DB integration
 - [ ] Scripting, agenda endpoint
 - [ ] Logging, analytics

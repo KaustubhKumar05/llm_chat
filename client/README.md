@@ -2,8 +2,9 @@
 
 ### TODO:
 - [x] STT
-- [ ] UI update
+- [x] Usable UI
 - [ ] Refactor
 - [ ] Transcripts, context 
+- [ ] Polish
 
 
