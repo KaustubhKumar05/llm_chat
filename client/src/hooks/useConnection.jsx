@@ -1,11 +1,12 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { WS_ENDPOINT } from "../constants";
 import useCustomStore from "../store";
 
 export const useConnection = () => {
-  const { setTranscripts } = useCustomStore();
+  const { setTranscripts, setSessions, setLiveSession, setViewingSession } =
+    useCustomStore();
 
-  const [ws, setWs] = useState();
+  const wsRef = useRef(null);
   const [isRecording, setIsRecording] = useState(false);
 
   const audioContextRef = useRef(null);
@@ -13,7 +14,7 @@ export const useConnection = () => {
   const isPlayingRef = useRef(false);
   const continueRecordingRef = useRef(true);
   const mediaRecorderRef = useRef(null);
-  
+
   // This is sent to the BE with each request for identification
   const uuidRef = useRef(null);
 
@@ -34,14 +35,12 @@ export const useConnection = () => {
 
     source.start();
 
-    // When this audio finishes, wait for the gap delay then play the next one
     source.onended = () => {
       playNextInQueue();
     };
   };
 
   useEffect(() => {
-    // Create audio context once
     audioContextRef.current = new (window.AudioContext ||
       window.webkitAudioContext)();
 
@@ -57,7 +56,7 @@ export const useConnection = () => {
 
     socket.onopen = () => {
       console.log("WebSocket connection established");
-      setWs(socket);
+      wsRef.current = socket;
     };
 
     socket.onmessage = async (event) => {
@@ -94,22 +93,33 @@ export const useConnection = () => {
         if (!isPlayingRef.current) {
           playNextInQueue();
         }
-      } else if (JSON.parse(event.data)?.type === "uuid") {
-        uuidRef.current = JSON.parse(event.data)?.uuid || "";
-        return;
       } else {
-        // Handle text/JSON messages
         console.log("debug> Receiving server message:", event.data);
         try {
           const message = JSON.parse(event.data);
-          if (message.type === "transcript_item") {
-            setTranscripts((prev) => [
-              ...prev,
-              {
-                query: message["transcript_item"].query,
-                response: message["transcript_item"].response,
-              },
-            ]);
+          switch (message.type) {
+            case "sessions":
+              setSessions(message.sessions);
+              break;
+            case "transcripts":
+              setTranscripts(message.transcripts);
+              break;
+            case "uuid":
+              uuidRef.current = message.uuid || "";
+              setViewingSession(message.uuid);
+              setLiveSession(message.uuid);
+              break;
+            case "transcript_item":
+              setTranscripts((prev) => [
+                ...prev,
+                {
+                  query: message.transcript_item.query,
+                  response: message.transcript_item.response,
+                },
+              ]);
+              break;
+            default:
+              console.log("Unhandled message type:", message.type);
           }
           console.log({ message });
         } catch (e) {
@@ -122,13 +132,29 @@ export const useConnection = () => {
       if (socket.readyState === WebSocket.OPEN) {
         socket.close();
       }
-
+      wsRef.current = null;
       // Close audio context on cleanup
       if (audioContextRef.current) {
         audioContextRef.current.close();
       }
     };
   }, []);
+
+  const sendWsMessage = useCallback((type, data = {}) => {
+    const attemptSend = () => {
+      if (wsRef.current && wsRef.current.readyState === 1) {
+        wsRef.current.send(JSON.stringify({ type, ...data }));
+        return;
+      }
+
+      setTimeout(() => attemptSend(), 10);
+    };
+
+    attemptSend();
+  }, []);
+
+  const getSessions = () => sendWsMessage("get_sessions");
+  const getTranscripts = (id) => sendWsMessage("get_transcripts", { id });
 
   const startRecording = async () => {
     try {
@@ -137,7 +163,7 @@ export const useConnection = () => {
       mediaRecorderRef.current = mediaRecorder;
 
       mediaRecorder.ondataavailable = async (event) => {
-        if (event.data.size > 0 && ws?.readyState === WebSocket.OPEN) {
+        if (event.data.size > 0 && wsRef.current === WebSocket.OPEN) {
           // Convert blob to base64
           const buffer = await event.data.arrayBuffer();
           const base64Data = btoa(
@@ -148,7 +174,7 @@ export const useConnection = () => {
             return;
           }
 
-          ws.send(
+          wsRef.current.send(
             JSON.stringify({
               type: "audio",
               audio: `data:audio/mp3;base64,${base64Data}`,
@@ -175,7 +201,7 @@ export const useConnection = () => {
 
       continueRecordingRef.current = false;
 
-      ws.send(
+      wsRef.current.send(
         JSON.stringify({
           type: "audio",
           final: true,
@@ -190,15 +216,12 @@ export const useConnection = () => {
   };
 
   return {
-    ws,
-    audioContextRef,
-    audioQueueRef,
-    isPlayingRef,
-    continueRecordingRef,
-    mediaRecorderRef,
-    uuidRef,
+    ws: wsRef.current,
+    sendWsMessage,
     startRecording,
     stopRecording,
+    getSessions,
+    getTranscripts,
     isRecording,
   };
 };

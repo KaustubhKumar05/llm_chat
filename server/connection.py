@@ -53,7 +53,23 @@ class Connection:
         message_type = message.get("type")
         uuid = message.get("uuid")
 
-        if message_type == "text":
+        if message_type == "get_sessions":
+
+            sessions = self.db.list_sessions()
+            print(sessions)
+            await self.frontend_ws.send_json(
+                {"type": "sessions", "sessions": sessions}
+            )
+        
+        elif message_type == "get_transcripts":
+            session_id = message.get("id")
+            transcript = self.db.fetch_transcript(session_id)
+            print(transcript)
+            await self.frontend_ws.send_json(
+                {"type": "transcripts", "transcripts": transcript}
+            )
+
+        elif message_type == "text":
             self._increment_uuid_counter(uuid)
 
             text = message.get("text", "")

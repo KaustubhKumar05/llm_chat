@@ -8,10 +8,12 @@ const useCustomStore = create((set) => {
   return {
     sessions: [],
     transcripts: [],
-    activeSession: null,
+    liveSession: null,
+    viewingSession: null,
     setSessions: createSetter('sessions'),
     setTranscripts: createSetter('transcripts'),
-    setActiveSession: createSetter('activeSession'),
+    setLiveSession: createSetter('liveSession'),
+    setViewingSession: createSetter('viewingSession'),
   };
 });
 

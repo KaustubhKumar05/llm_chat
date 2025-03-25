@@ -101,7 +101,7 @@ class DBManager(AbstractDBManager):
             for key in self.redis_client.scan_iter(match="session:*"):
                 if key == "session:count":
                     continue
-                session_id = int(key.split(":")[1])
+                session_id = (key.split(":")[1])
                 session_ids.append(session_id)
             return session_ids
         except Exception as e:
