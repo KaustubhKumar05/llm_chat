@@ -4,7 +4,8 @@
 - [x] STT
 - [x] Usable UI
 - [x] Refactor
-- [ ] Transcripts, context 
+- [x] Transcripts
+- [ ] IndexedDB
 - [ ] Continuous audio
 - [ ] Polish
 
