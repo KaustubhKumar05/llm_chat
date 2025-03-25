@@ -12,8 +12,8 @@ export const Sidebar = () => {
   }, []);
 
   return (
-    <div className="bg-blue-400 w-80 p-2">
-      <p>Sessions</p>
+    <div className="bg-blue-400 w-80 p-2 shrink-0">
+      <p className="text-white font-bold">Sessions</p>
       {[liveSession, ...sessions].map((session) => (
         <div
           className={`truncate my-3 text-xs font-medium cursor-pointer ${
