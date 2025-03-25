@@ -3,7 +3,7 @@
 ### TODO:
 - [x] STT
 - [x] Usable UI
-- [ ] Refactor
+- [x] Refactor
 - [ ] Transcripts, context 
 - [ ] Polish
 
