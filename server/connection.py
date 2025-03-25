@@ -12,6 +12,7 @@ import logging
 
 load_dotenv()
 
+
 class Connection:
     """High-level class that manages Cartesia, LLMs, Redis, and frontend WebSocket connection."""
 
@@ -27,7 +28,7 @@ class Connection:
         self.tts_chunking_limit = config["tts_chunking_limit"]
 
         self.llm = GeminiLLM()
-        
+
         self.db = DBManager()
 
         self.audio_buffer = bytearray()
@@ -54,13 +55,10 @@ class Connection:
         uuid = message.get("uuid")
 
         if message_type == "get_sessions":
-
             sessions = self.db.list_sessions()
             print(sessions)
-            await self.frontend_ws.send_json(
-                {"type": "sessions", "sessions": sessions}
-            )
-        
+            await self.frontend_ws.send_json({"type": "sessions", "sessions": sessions})
+
         elif message_type == "get_transcripts":
             session_id = message.get("id")
             transcript = self.db.fetch_transcript(session_id)
@@ -81,17 +79,20 @@ class Connection:
                 await self.frontend_ws.send_json(
                     {"type": "transcript_item", "transcript_item": resp}
                 )
-        
+
         elif message_type == "delete_session":
             session_id = message.get("id")
             if self.db.delete_session(session_id):
-                await self.frontend_ws.send_json({"type": "session_deleted", "id": session_id})
+                await self.frontend_ws.send_json(
+                    {"type": "session_deleted", "id": session_id}
+                )
 
         elif message_type == "audio":
             self._increment_uuid_counter(uuid)
             count = self.user_identifier_map[uuid]
             file_name = f"media/{count}-{uuid}.mp3"
             audio_data = message.get("audio")
+
             print(
                 "Audio data received",
                 audio_data,
@@ -121,8 +122,10 @@ class Connection:
                 await self.frontend_ws.send_json(
                     {"type": "transcript_item", "transcript_item": resp}
                 )
-                
-                self.db.append_transcript(uuid, {"query": resp["query"], "response": resp["response"]})
+                print("before db op")
+                self.db.append_transcript(
+                    uuid, {"query": resp["query"], "response": resp["response"]}
+                )
                 # if resp["context"]:
                 #     self.db.append_context(uuid, resp["context"])
 

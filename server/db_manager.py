@@ -68,7 +68,7 @@ class DBManager(AbstractDBManager):
             password=os.getenv("REDIS_PASSWORD", ""),
         )
 
-    def append_transcript(self, session_id: int, transcript_item: dict) -> bool:
+    def append_transcript(self, session_id: str, transcript_item: dict) -> bool:
         """Append a transcript item to a session's transcript list using Redis list operations.
         Creates a new session if session_id doesn't exist, otherwise appends to existing session."""
         try:
@@ -85,7 +85,7 @@ class DBManager(AbstractDBManager):
             print(f"Error appending transcript: {str(e)} \n\n {transcript_item}")
             return False
 
-    def fetch_transcript(self, session_id: int) -> Optional[List[Dict]]:
+    def fetch_transcript(self, session_id: str) -> Optional[List[Dict]]:
         """Fetch a specific transcript by ID using Redis list operations."""
         try:
             transcript_key = f"session:{session_id}"
@@ -99,14 +99,14 @@ class DBManager(AbstractDBManager):
             print(f"Error fetching transcript: {str(e)}")
             return None
 
-    def list_sessions(self) -> List[int]:
+    def list_sessions(self) -> List[str]:
         """List all session IDs."""
         try:
             session_ids = []
             for key in self.redis_client.scan_iter(match="session:*"):
                 if key == "session:count":
                     continue
-                session_id = (key.split(":")[1])
+                session_id = key.split(":")[1]
                 session_ids.append(session_id)
             return session_ids
         except Exception as e:
@@ -159,7 +159,7 @@ class DBManager(AbstractDBManager):
             print(f"Error appending context: {str(e)}")
             return False
 
-    def get_context(self, session_id: int) -> Optional[Dict]:
+    def get_context(self, session_id: str) -> Optional[Dict]:
         """Get the entire context object for a session."""
         try:
             context_key = f"session:{session_id}:context"
@@ -169,15 +169,15 @@ class DBManager(AbstractDBManager):
             print(f"Error fetching context: {str(e)}")
             return None
 
-    def delete_session(self, session_id: int) -> bool:
+    def delete_session(self, session_id: str) -> bool:
         """Delete a session and all its associated data."""
         try:
             session_key = f"session:{session_id}"
             context_key = f"session:{session_id}:context"
-            
+
             # Delete session transcript and context
             self.redis_client.delete(session_key, context_key)
-            
+
             # Remove from session indexs
             self.redis_client.srem("sessions", str(session_id))
             return True
