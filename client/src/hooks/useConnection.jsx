@@ -43,90 +43,96 @@ export const useConnection = () => {
   useEffect(() => {
     audioContextRef.current = new (window.AudioContext ||
       window.webkitAudioContext)();
+    let socket;
+    if (!wsRef.current) {
+      socket = new WebSocket(WS_ENDPOINT);
 
-    const socket = new WebSocket(WS_ENDPOINT);
+      socket.onerror = (error) => {
+        console.error("WebSocket error:", error);
+      };
 
-    socket.onerror = (error) => {
-      console.error("WebSocket error:", error);
-    };
+      socket.onclose = (event) => {
+        console.log("WebSocket closed:", event.code, event.reason);
+      };
 
-    socket.onclose = (event) => {
-      console.log("WebSocket closed:", event.code, event.reason);
-    };
+      socket.onopen = () => {
+        console.log("WebSocket connection established");
+        wsRef.current = socket;
+      };
 
-    socket.onopen = () => {
-      console.log("WebSocket connection established");
-      wsRef.current = socket;
-    };
+      socket.onmessage = async (event) => {
+        if (event.data instanceof Blob) {
+          // Handle PCM audio data
+          const audioData = await event.data.arrayBuffer();
 
-    socket.onmessage = async (event) => {
-      if (event.data instanceof Blob) {
-        // Handle PCM audio data
-        const audioData = await event.data.arrayBuffer();
+          // Convert PCM data to audio buffer
+          const audioContext = audioContextRef.current;
+          const pcmData = new Int16Array(audioData);
+          const floatData = new Float32Array(pcmData.length);
 
-        // Convert PCM data to audio buffer
-        const audioContext = audioContextRef.current;
-        const pcmData = new Int16Array(audioData);
-        const floatData = new Float32Array(pcmData.length);
-
-        // Convert from 16-bit integer to float in range [-1, 1]
-        for (let i = 0; i < pcmData.length; i++) {
-          floatData[i] = pcmData[i] / 32768.0;
-        }
-
-        // Create an audio buffer (44.1kHz mono)
-        const audioBuffer = audioContext.createBuffer(
-          1,
-          floatData.length,
-          44100
-        );
-
-        // Fill the buffer
-        audioBuffer.getChannelData(0).set(floatData);
-
-        // Add to queue and play if not already playing
-        audioQueueRef.current.push(audioBuffer);
-        console.log(
-          `debug> Added audio to queue. Queue length: ${audioQueueRef.current.length}`
-        );
-
-        if (!isPlayingRef.current) {
-          playNextInQueue();
-        }
-      } else {
-        console.log("debug> Receiving server message:", event.data);
-        try {
-          const message = JSON.parse(event.data);
-          switch (message.type) {
-            case "sessions":
-              setSessions(message.sessions);
-              break;
-            case "transcripts":
-              setTranscripts(message.transcripts);
-              break;
-            case "uuid":
-              uuidRef.current = message.uuid || "";
-              setViewingSession(message.uuid);
-              setLiveSession(message.uuid);
-              break;
-            case "transcript_item":
-              setTranscripts((prev) => [
-                ...prev,
-                {
-                  query: message.transcript_item.query,
-                  response: message.transcript_item.response,
-                },
-              ]);
-              break;
-            default:
-              console.log("Unhandled message type:", message.type);
+          // Convert from 16-bit integer to float in range [-1, 1]
+          for (let i = 0; i < pcmData.length; i++) {
+            floatData[i] = pcmData[i] / 32768.0;
           }
-          console.log({ message });
-        } catch (e) {
-          console.log("Non-JSON message:", e);
+
+          // Create an audio buffer (44.1kHz mono)
+          const audioBuffer = audioContext.createBuffer(
+            1,
+            floatData.length,
+            44100
+          );
+
+          // Fill the buffer
+          audioBuffer.getChannelData(0).set(floatData);
+
+          // Add to queue and play if not already playing
+          audioQueueRef.current.push(audioBuffer);
+          console.log(
+            `debug> Added audio to queue. Queue length: ${audioQueueRef.current.length}`
+          );
+
+          if (!isPlayingRef.current) {
+            playNextInQueue();
+          }
+        } else {
+          console.log("debug> Receiving server message:", event.data);
+          try {
+            const message = JSON.parse(event.data);
+            switch (message.type) {
+              case "sessions":
+                setSessions(message.sessions);
+                break;
+              case "transcripts":
+                setTranscripts(message.transcripts);
+                break;
+              case "uuid":
+                console.log({ uuid: uuidRef.current });
+                if (uuidRef.current) {
+                  // break;
+                }
+                uuidRef.current = message.uuid || "";
+                setViewingSession(message.uuid);
+                setLiveSession(message.uuid);
+                break;
+              case "transcript_item":
+                setTranscripts((prev) => [
+                  ...prev,
+                  {
+                    query: message.transcript_item.query,
+                    response: message.transcript_item.response,
+                  },
+                ]);
+                break;
+              default:
+                console.log("Unhandled message type:", message.type);
+            }
+            console.log({ message });
+          } catch (e) {
+            console.log("Non-JSON message:", e);
+          }
         }
-      }
-    };
+      };
+    }
 
     return () => {
       if (socket.readyState === WebSocket.OPEN) {
@@ -155,6 +161,7 @@ export const useConnection = () => {
 
   const getSessions = () => sendWsMessage("get_sessions");
   const getTranscripts = (id) => sendWsMessage("get_transcripts", { id });
+  const deleteSession = (id) => sendWsMessage("delete_session", { id });
 
   const startRecording = async () => {
     try {
@@ -163,7 +170,7 @@ export const useConnection = () => {
       mediaRecorderRef.current = mediaRecorder;
 
       mediaRecorder.ondataavailable = async (event) => {
-        if (event.data.size > 0 && wsRef.current === WebSocket.OPEN) {
+        if (event.data.size > 0 && wsRef.current.readyState === WebSocket.OPEN) {
           // Convert blob to base64
           const buffer = await event.data.arrayBuffer();
           const base64Data = btoa(
@@ -219,6 +226,7 @@ export const useConnection = () => {
     ws: wsRef.current,
     sendWsMessage,
     startRecording,
+    deleteSession,
     stopRecording,
     getSessions,
     getTranscripts,

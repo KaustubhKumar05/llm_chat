@@ -5,13 +5,28 @@ import useCustomStore from "../store";
 
 export const Footer = () => {
   const inputRef = useRef(null);
-  const { viewingSession, liveSession } = useCustomStore();
-  const { sendWsMessage, startRecording, stopRecording, isRecording } =
-    useConnection();
+  const { viewingSession, liveSession, setViewingSession } = useCustomStore();
+  const {
+    sendWsMessage,
+    startRecording,
+    stopRecording,
+    isRecording,
+    deleteSession,
+    getTranscripts,
+    getSessions,
+  } = useConnection();
 
   if (viewingSession !== liveSession) {
     return (
-      <button className="mx-auto rounded-full bg-red-400 p-2">
+      <button
+        className="mx-auto rounded-full bg-red-400 p-2"
+        onClick={() => {
+          deleteSession(viewingSession);
+          setViewingSession(liveSession);
+          getTranscripts(liveSession);
+          getSessions();
+        }}
+      >
         <Trash />
       </button>
     );

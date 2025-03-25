@@ -49,6 +49,11 @@ class AbstractDBManager(ABC):
         """Get the entire context object for a session."""
         pass
 
+    @abstractmethod
+    def delete_session(self, session_id: int) -> bool:
+        """Delete a session and all its associated data."""
+        pass
+
 
 class DBManager(AbstractDBManager):
     """Manages database operations for transcripts and call scripts using Redis."""
@@ -163,3 +168,19 @@ class DBManager(AbstractDBManager):
         except Exception as e:
             print(f"Error fetching context: {str(e)}")
             return None
+
+    def delete_session(self, session_id: int) -> bool:
+        """Delete a session and all its associated data."""
+        try:
+            session_key = f"session:{session_id}"
+            context_key = f"session:{session_id}:context"
+            
+            # Delete session transcript and context
+            self.redis_client.delete(session_key, context_key)
+            
+            # Remove from session indexs
+            self.redis_client.srem("sessions", str(session_id))
+            return True
+        except Exception as e:
+            print(f"Error deleting session: {str(e)}")
+            return False

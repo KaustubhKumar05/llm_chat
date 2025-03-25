@@ -3,7 +3,8 @@ import { useConnection } from "../hooks/useConnection";
 import useCustomStore from "../store";
 
 export const Sidebar = () => {
-  const { sessions, setViewingSession, liveSession, viewingSession } = useCustomStore();
+  const { sessions, setViewingSession, liveSession, viewingSession } =
+    useCustomStore();
   const { getSessions, getTranscripts } = useConnection();
 
   useEffect(() => {
@@ -15,8 +16,8 @@ export const Sidebar = () => {
       <p>Sessions</p>
       {[liveSession, ...sessions].map((session) => (
         <div
-          className={`truncate my-3 text-xs font-medium text-white cursor-pointer ${
-            viewingSession === session ? "text-green-950" : ""
+          className={`truncate my-3 text-xs font-medium cursor-pointer ${
+            viewingSession === session ? "text-green-950" : "text-white"
           }`}
           onClick={() => {
             setViewingSession(session);

@@ -81,6 +81,11 @@ class Connection:
                 await self.frontend_ws.send_json(
                     {"type": "transcript_item", "transcript_item": resp}
                 )
+        
+        elif message_type == "delete_session":
+            session_id = message.get("id")
+            if self.db.delete_session(session_id):
+                await self.frontend_ws.send_json({"type": "session_deleted", "id": session_id})
 
         elif message_type == "audio":
             self._increment_uuid_counter(uuid)
@@ -117,7 +122,7 @@ class Connection:
                     {"type": "transcript_item", "transcript_item": resp}
                 )
                 
-                self.db.append_transcript(uuid, {"query": resp["query"], "response": resp["query"]})
+                self.db.append_transcript(uuid, {"query": resp["query"], "response": resp["response"]})
                 # if resp["context"]:
                 #     self.db.append_context(uuid, resp["context"])
 
