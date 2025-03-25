@@ -13,7 +13,7 @@ import logging
 load_dotenv()
 
 class Connection:
-    """High-level class that manages Cartesia, LLMs, and frontend WebSocket connection."""
+    """High-level class that manages Cartesia, LLMs, Redis, and frontend WebSocket connection."""
 
     def __init__(self):
         self.logger = logging.getLogger(self.__class__.__name__)

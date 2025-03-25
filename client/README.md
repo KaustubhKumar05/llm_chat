@@ -5,6 +5,7 @@
 - [x] Usable UI
 - [x] Refactor
 - [ ] Transcripts, context 
+- [ ] Continuous audio
 - [ ] Polish
 
 
