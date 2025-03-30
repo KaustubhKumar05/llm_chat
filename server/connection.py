@@ -75,9 +75,12 @@ class Connection:
             if text:
                 resp = self.llm.generate_response(text, "")
                 print("response received", resp)
-                await self.stream_as_audio_response(resp["response"])
                 await self.frontend_ws.send_json(
                     {"type": "transcript_item", "transcript_item": resp}
+                )
+                await self.stream_as_audio_response(resp["response"])
+                self.db.append_transcript(
+                    uuid, {"query": resp["query"], "response": resp["response"]}
                 )
 
         elif message_type == "delete_session":
@@ -118,11 +121,11 @@ class Connection:
                 )
 
                 print("response received", resp, f"{file_name=}")
-                await self.stream_as_audio_response(resp["response"])
                 await self.frontend_ws.send_json(
                     {"type": "transcript_item", "transcript_item": resp}
                 )
-                print("before db op")
+                
+                await self.stream_as_audio_response(resp["response"])
                 self.db.append_transcript(
                     uuid, {"query": resp["query"], "response": resp["response"]}
                 )

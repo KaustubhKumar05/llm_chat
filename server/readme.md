@@ -12,5 +12,6 @@ uvicorn main:app --reload
 - [x] Gemini integration - realtime to text
 - [x] Transcripts
 - [x] DB integration
+- [ ] Chat context
 - [ ] Scripting, agenda endpoint
 - [ ] Logging, analytics

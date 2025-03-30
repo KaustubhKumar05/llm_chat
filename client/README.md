@@ -5,8 +5,8 @@
 - [x] Usable UI
 - [x] Refactor
 - [x] Transcripts
-- [ ] IndexedDB
 - [ ] Continuous audio
 - [ ] Polish
+- [ ] IndexedDB
 
 
