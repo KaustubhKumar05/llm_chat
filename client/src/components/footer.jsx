@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import { useConnection } from "../hooks/useConnection";
-import { Trash, MicIcon, MicOffIcon, Send } from "lucide-react";
+import { Trash, MicIcon, MicOffIcon, Send, CircleStop } from "lucide-react";
 import useCustomStore from "../store";
 
 export const Footer = () => {
@@ -12,6 +12,8 @@ export const Footer = () => {
     stopRecording,
     isRecording,
     deleteSession,
+    isStreamingResponse,
+    stopStreamingResponse,
     getTranscripts,
     getSessions,
   } = useConnection();
@@ -66,6 +68,13 @@ export const Footer = () => {
         }}
       >
         {isRecording ? <MicIcon size={18} /> : <MicOffIcon size={18} />}
+      </button>
+      <button
+        disabled={!isStreamingResponse}
+        onClick={stopStreamingResponse}
+        className="bg-red-600 text-white w-max p-2 rounded-full disabled:opacity-80 disabled:cursor-not-allowed"
+      >
+        <CircleStop />
       </button>
     </div>
   );

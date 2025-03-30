@@ -41,6 +41,12 @@ class GeminiLLM(LLM):
             if audio_path:
                 audio_file = self.client.files.upload(file=audio_path)
                 self.logger.debug("Uploaded audio file: %s", audio_file)
+            
+            # Initialize context and last_response for new UUIDs
+            if uuid not in self.context:
+                self.context[uuid] = ""
+            if uuid not in self.last_response:
+                self.last_response[uuid] = ""
 
             response = self.client.models.generate_content(
                 model=self.model_name,

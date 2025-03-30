@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 import uuid
 import base64
 import logging
+import asyncio
 
 load_dotenv()
 
@@ -34,6 +35,7 @@ class Connection:
         self.audio_buffer = bytearray()
         # ID to count map to keep track of each audio message
         self.user_identifier_map = {}
+        self.kill_streaming = {}
 
     async def connect(self, websocket: WebSocket) -> None:
         """Initialize connection with frontend."""
@@ -55,7 +57,6 @@ class Connection:
 
         if message_type == "get_sessions":
             sessions = self.db.list_sessions()
-            print(sessions)
             await self.frontend_ws.send_json({"type": "sessions", "sessions": sessions})
 
         elif message_type == "get_transcripts":
@@ -65,6 +66,10 @@ class Connection:
             await self.frontend_ws.send_json(
                 {"type": "transcripts", "transcripts": transcript}
             )
+
+        elif message_type == "kill_streaming":
+            self.kill_streaming[current_uuid] = True
+            print(f"killing stream for {current_uuid=}")
 
         elif message_type == "text":
             self._increment_uuid_counter(current_uuid)
@@ -77,7 +82,7 @@ class Connection:
                 await self.frontend_ws.send_json(
                     {"type": "transcript_item", "transcript_item": resp}
                 )
-                await self.stream_as_audio_response(resp["response"])
+                await self.stream_as_audio_response(current_uuid, resp["response"])
                 self.db.append_transcript(
                     current_uuid, {"query": resp["query"], "response": resp["response"]}
                 )
@@ -95,11 +100,8 @@ class Connection:
             file_name = f"media/{count}-{current_uuid}.mp3"
             audio_data = message.get("audio")
 
-            print(
-                "Audio data received",
-                audio_data,
-                f"{file_name=} {audio_data=} {count=}",
-            )
+            print("Audio data received")
+
             if audio_data:
                 base64_data = (
                     audio_data.split("base64,")[1]
@@ -124,8 +126,7 @@ class Connection:
                 await self.frontend_ws.send_json(
                     {"type": "transcript_item", "transcript_item": resp}
                 )
-                
-                await self.stream_as_audio_response(resp["response"])
+                await self.stream_as_audio_response(current_uuid, resp["response"])
                 self.db.append_transcript(
                     current_uuid, {"query": resp["query"], "response": resp["response"]}
                 )
@@ -137,7 +138,7 @@ class Connection:
                 {"type": "error", "message": f"Unknown message type: {message_type}"}
             )
 
-    async def stream_as_audio_response(self, text: str) -> None:
+    async def stream_as_audio_response(self, current_uuid: str, text: str) -> None:
         """Process text-to-speech conversion and stream to frontend."""
         try:
             buffer = bytearray()
@@ -147,7 +148,7 @@ class Connection:
                 {"type": "tts_start", "message": "Starting TTS processing"}
             )
 
-            for output in self.tts_ws.send(
+            tts_stream = self.tts_ws.send(
                 model_id=self.model_id,
                 transcript=text,
                 voice_embedding=self.voice_embedding,
@@ -158,7 +159,22 @@ class Connection:
                     "encoding": "pcm_s16le",
                     "sample_rate": 44100,
                 },
-            ):
+            )
+
+            for output in tts_stream:
+                
+                print(f"kill streaming value for {current_uuid}", self.kill_streaming.get(current_uuid, False))
+                if self.kill_streaming.get(current_uuid, False):
+                    buffer.clear()
+                    chunk_count = 0
+                    await self.frontend_ws.send_json(
+                        {
+                            "type": "tts_stopped",
+                            "message": "TTS streaming stopped on client request",
+                        }
+                    )
+                    self.kill_streaming[current_uuid] = False
+                    break
                 buffer.extend(output["audio"])
                 chunk_count += 1
 

@@ -8,6 +8,7 @@ export const useConnection = () => {
 
   const wsRef = useRef(null);
   const [isRecording, setIsRecording] = useState(false);
+  const [isStreamingResponse, setIsStreamingResponse] = useState(false);
 
   const audioContextRef = useRef(null);
   const audioQueueRef = useRef([]);
@@ -101,6 +102,13 @@ export const useConnection = () => {
             switch (message.type) {
               case "sessions":
                 setSessions(message.sessions);
+                break;
+              case "tts_start":
+                setIsStreamingResponse(true);
+                break;
+              case "tts_stopped":
+              case "tts_complete":
+                setIsStreamingResponse(false);
                 break;
               case "transcripts":
                 setTranscripts(message.transcripts);
@@ -223,6 +231,8 @@ export const useConnection = () => {
     }
   };
 
+  const stopStreamingResponse = () => sendWsMessage("kill_streaming");
+
   return {
     ws: wsRef.current,
     sendWsMessage,
@@ -231,6 +241,8 @@ export const useConnection = () => {
     stopRecording,
     getSessions,
     getTranscripts,
+    stopStreamingResponse,
+    isStreamingResponse,
     isRecording,
   };
 };
