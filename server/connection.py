@@ -42,17 +42,16 @@ class Connection:
         self.is_connected = True
         user_identifier = str(uuid.uuid4())
         self.user_identifier_map[user_identifier] = 0
-        self.logger.debug("Connection established with frontend")
         await self.frontend_ws.send_json({"type": "uuid", "uuid": user_identifier})
+        print("sent uuid", user_identifier)
 
     async def handle_message(self, message: Dict[str, Any]) -> None:
         """Handle messages from frontend and route to appropriate service."""
         if not self.is_connected:
             raise RuntimeError("No active connection with frontend")
 
-        self.logger.debug("Received message from frontend: %s", message)
         message_type = message.get("type")
-        uuid = message.get("uuid")
+        current_uuid = message.get("uuid")
 
         if message_type == "get_sessions":
             sessions = self.db.list_sessions()
@@ -68,7 +67,7 @@ class Connection:
             )
 
         elif message_type == "text":
-            self._increment_uuid_counter(uuid)
+            self._increment_uuid_counter(current_uuid)
 
             text = message.get("text", "")
             print("text received", text)
@@ -80,7 +79,7 @@ class Connection:
                 )
                 await self.stream_as_audio_response(resp["response"])
                 self.db.append_transcript(
-                    uuid, {"query": resp["query"], "response": resp["response"]}
+                    current_uuid, {"query": resp["query"], "response": resp["response"]}
                 )
 
         elif message_type == "delete_session":
@@ -91,9 +90,9 @@ class Connection:
                 )
 
         elif message_type == "audio":
-            self._increment_uuid_counter(uuid)
-            count = self.user_identifier_map[uuid]
-            file_name = f"media/{count}-{uuid}.mp3"
+            self._increment_uuid_counter(current_uuid)
+            count = self.user_identifier_map[current_uuid]
+            file_name = f"media/{count}-{current_uuid}.mp3"
             audio_data = message.get("audio")
 
             print(
@@ -127,7 +126,7 @@ class Connection:
                 
                 await self.stream_as_audio_response(resp["response"])
                 self.db.append_transcript(
-                    uuid, {"query": resp["query"], "response": resp["response"]}
+                    current_uuid, {"query": resp["query"], "response": resp["response"]}
                 )
                 # if resp["context"]:
                 #     self.db.append_context(uuid, resp["context"])
@@ -192,7 +191,7 @@ class Connection:
         """Process speech-to-text conversion."""
         pass
 
-    def _increment_uuid_counter(self, uuid: str):
-        if uuid not in self.user_identifier_map:
-            self.user_identifier_map[uuid] = 0
-        self.user_identifier_map[uuid] += 1
+    def _increment_uuid_counter(self, current_uuid: str):
+        if current_uuid not in self.user_identifier_map:
+            self.user_identifier_map[current_uuid] = 0
+        self.user_identifier_map[current_uuid] += 1

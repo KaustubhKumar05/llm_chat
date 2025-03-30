@@ -106,10 +106,6 @@ export const useConnection = () => {
                 setTranscripts(message.transcripts);
                 break;
               case "uuid":
-                console.log({ uuid: uuidRef.current });
-                if (uuidRef.current) {
-                  // break;
-                }
                 uuidRef.current = message.uuid || "";
                 setViewingSession(message.uuid);
                 setLiveSession(message.uuid);
@@ -149,7 +145,9 @@ export const useConnection = () => {
   const sendWsMessage = useCallback((type, data = {}) => {
     const attemptSend = () => {
       if (wsRef.current && wsRef.current.readyState === 1) {
-        wsRef.current.send(JSON.stringify({ type, ...data }));
+        wsRef.current.send(
+          JSON.stringify({ type, ...data, uuid: uuidRef.current })
+        );
         return;
       }
 
@@ -170,7 +168,10 @@ export const useConnection = () => {
       mediaRecorderRef.current = mediaRecorder;
 
       mediaRecorder.ondataavailable = async (event) => {
-        if (event.data.size > 0 && wsRef.current.readyState === WebSocket.OPEN) {
+        if (
+          event.data.size > 0 &&
+          wsRef.current.readyState === WebSocket.OPEN
+        ) {
           // Convert blob to base64
           const buffer = await event.data.arrayBuffer();
           const base64Data = btoa(
