@@ -79,11 +79,26 @@ class DBManager(AbstractDBManager):
                     "response": transcript_item.get("response", ""),
                 }
             )
+            # Add to sessions sorted set with timestamp if it's a new session
+            if self.redis_client.llen(session_key) == 0:
+                import time
+                self.redis_client.zadd("sessions", {session_id: time.time()})
+            
             self.redis_client.rpush(session_key, transcript_entry)
             return True
         except Exception as e:
             print(f"Error appending transcript: {str(e)} \n\n {transcript_item}")
             return False
+
+    def list_sessions(self) -> List[str]:
+        """List all session IDs in chronological order (oldest first)."""
+        try:
+            # Get all sessions from the sorted set, ordered by score (timestamp)
+            session_ids = self.redis_client.zrange("sessions", 0, -1)
+            return session_ids
+        except Exception as e:
+            print(f"Error listing sessions: {str(e)}")
+            return []
 
     def fetch_transcript(self, session_id: str) -> Optional[List[Dict]]:
         """Fetch a specific transcript by ID using Redis list operations."""
@@ -178,8 +193,8 @@ class DBManager(AbstractDBManager):
             # Delete session transcript and context
             self.redis_client.delete(session_key, context_key)
 
-            # Remove from session indexs
-            self.redis_client.srem("sessions", str(session_id))
+            # Remove from sessions sorted set
+            self.redis_client.zrem("sessions", str(session_id))
             return True
         except Exception as e:
             print(f"Error deleting session: {str(e)}")

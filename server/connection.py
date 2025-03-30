@@ -72,7 +72,7 @@ class Connection:
             text = message.get("text", "")
             print("text received", text)
             if text:
-                resp = self.llm.generate_response(text, "")
+                resp = self.llm.generate_response(current_uuid, text, "")
                 print("response received", resp)
                 await self.frontend_ws.send_json(
                     {"type": "transcript_item", "transcript_item": resp}
@@ -115,6 +115,7 @@ class Connection:
                 self.logger.debug("Saved audio file as %s", file_name)
                 self.audio_buffer.clear()
                 resp = self.llm.generate_response(
+                    current_uuid,
                     "",
                     file_name,
                 )
