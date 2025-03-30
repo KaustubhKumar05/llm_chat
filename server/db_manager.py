@@ -91,10 +91,10 @@ class DBManager(AbstractDBManager):
             return False
 
     def list_sessions(self) -> List[str]:
-        """List all session IDs in chronological order (oldest first)."""
+        """List all session IDs in reverse chronological order."""
         try:
             # Get all sessions from the sorted set, ordered by score (timestamp)
-            session_ids = self.redis_client.zrange("sessions", 0, -1)
+            session_ids = self.redis_client.zrange("sessions", 0, -1, True)
             return session_ids
         except Exception as e:
             print(f"Error listing sessions: {str(e)}")
@@ -114,19 +114,6 @@ class DBManager(AbstractDBManager):
             print(f"Error fetching transcript: {str(e)}")
             return None
 
-    def list_sessions(self) -> List[str]:
-        """List all session IDs."""
-        try:
-            session_ids = []
-            for key in self.redis_client.scan_iter(match="session:*"):
-                if key == "session:count":
-                    continue
-                session_id = key.split(":")[1]
-                session_ids.append(session_id)
-            return session_ids
-        except Exception as e:
-            print(f"Error listing sessions: {str(e)}")
-            return []
 
     def add_call_script(self, script_name: str, script_content: str) -> bool:
         """Add a new call script."""
