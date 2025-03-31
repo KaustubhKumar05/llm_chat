@@ -10,14 +10,18 @@ const useCustomStore = create((set) => {
   return {
     sessions: [],
     transcripts: [],
+    isLoading: true,
+    isThinking: false,
     deletedSessions: new Set(),
     liveSession: null,
     viewingSession: null,
+    setIsLoading: (val) => set({ isLoading: val }),
+    setIsThinking: (val) => set({ isThinking: val }),
+    addDeletedSession: (id) =>
+      set((state) => ({ deletedSessions: state.deletedSessions.add(id) })),
     setSessions: createSetter("sessions"),
     setTranscripts: createSetter("transcripts"),
     setLiveSession: createSetter("liveSession"),
-    addDeletedSession: (id) =>
-      set((state) => ({ deletedSessions: state.deletedSessions.add(id) })),
     setViewingSession: createSetter("viewingSession"),
   };
 });

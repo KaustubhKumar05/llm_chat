@@ -5,7 +5,14 @@ import useCustomStore from "../store";
 
 export const Footer = () => {
   const inputRef = useRef(null);
-  const { viewingSession, liveSession, setViewingSession, setTranscripts, addDeletedSession } = useCustomStore();
+  const {
+    viewingSession,
+    liveSession,
+    setViewingSession,
+    setTranscripts,
+    addDeletedSession,
+    setIsThinking,
+  } = useCustomStore();
   const {
     sendWsMessage,
     startRecording,
@@ -22,7 +29,7 @@ export const Footer = () => {
       <button
         className="mx-auto rounded-full bg-white shadow border text-red-600 p-2 relative top-2"
         onClick={() => {
-          addDeletedSession(viewingSession)
+          addDeletedSession(viewingSession);
           setTranscripts([]);
           deleteSession(viewingSession);
           setViewingSession(liveSession);
@@ -54,6 +61,7 @@ export const Footer = () => {
           onMouseUp={() => {
             if (isRecording) {
               stopRecording();
+              setIsThinking(true);
             }
           }}
           className={`${
@@ -72,6 +80,7 @@ export const Footer = () => {
               if (content) {
                 sendWsMessage("text", { text: content });
                 inputRef.current.value = "";
+                setIsThinking(true);
               }
             }}
           >

@@ -37,7 +37,7 @@ export const Sidebar = () => {
           (session) =>
             !deletedSessions.has(session) && (
               <div
-                className={`truncate my-2 p-2 rounded flex items-center hover:bg-blue-100/50 text-xs font-medium cursor-pointer ${
+                className={`truncate my-2 p-2 rounded-2xl flex items-center hover:bg-blue-100/50 text-xs font-medium cursor-pointer ${
                   viewingSession === session
                     ? "text-blue-800 bg-blue-100"
                     : "text-black"

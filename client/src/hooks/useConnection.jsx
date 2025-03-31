@@ -3,8 +3,14 @@ import { WS_ENDPOINT } from "../constants";
 import useCustomStore from "../store";
 
 export const useConnection = () => {
-  const { setTranscripts, setSessions, setLiveSession, setViewingSession } =
-    useCustomStore();
+  const {
+    setTranscripts,
+    setSessions,
+    setLiveSession,
+    setViewingSession,
+    setIsLoading,
+    setIsThinking,
+  } = useCustomStore();
 
   const wsRef = useRef(null);
   const [isRecording, setIsRecording] = useState(false);
@@ -112,14 +118,17 @@ export const useConnection = () => {
                 break;
               case "transcripts":
                 setTranscripts(message.transcripts);
+                setIsLoading(false);
                 break;
               case "uuid":
                 setTranscripts([]);
                 uuidRef.current = message.uuid || "";
                 setViewingSession(message.uuid);
                 setLiveSession(message.uuid);
+                setIsLoading(false);
                 break;
               case "transcript_item":
+                setIsThinking(false)
                 setTranscripts((prev) => [
                   ...prev,
                   {
@@ -169,7 +178,10 @@ export const useConnection = () => {
 
   const startNewSession = () => sendWsMessage("new_session");
   const getSessions = () => sendWsMessage("get_sessions");
-  const getTranscripts = (id) => sendWsMessage("get_transcripts", { id });
+  const getTranscripts = (id) => {
+    setIsLoading(true);
+    sendWsMessage("get_transcripts", { id });
+  };
   const deleteSession = (id) => sendWsMessage("delete_session", { id });
 
   const startRecording = async () => {
