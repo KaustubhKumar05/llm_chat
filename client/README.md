@@ -8,6 +8,7 @@
 - [x] Cache transcripts
 - [ ] Audio playback cancel button
 - [ ] Context UI
+- [ ] Text only mode toggle
 - [ ] IndexedDB / LocalStorage
 
 
