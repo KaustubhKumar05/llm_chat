@@ -9,7 +9,6 @@ from dotenv import load_dotenv
 import uuid
 import base64
 import logging
-import asyncio
 
 load_dotenv()
 
@@ -162,8 +161,6 @@ class Connection:
             )
 
             for output in tts_stream:
-                
-                print(f"kill streaming value for {current_uuid}", self.kill_streaming.get(current_uuid, False))
                 if self.kill_streaming.get(current_uuid, False):
                     buffer.clear()
                     chunk_count = 0

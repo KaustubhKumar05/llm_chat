@@ -6,7 +6,7 @@ function App() {
   return (
     <div className="flex">
       <Sidebar />
-      <div className="flex flex-col h-screen w-full overflow-hidden mx-auto bg-blue-100 gap-4">
+      <div className="flex flex-col h-screen w-full overflow-hidden mx-auto bg-blue-100/50">
         <Messages />
         <Footer />
       </div>

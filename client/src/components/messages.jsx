@@ -4,20 +4,25 @@ export const Messages = () => {
   const { transcripts: chatMessages } = useCustomStore();
   return (
     <div
-      style={{ height: "calc(100vh - 64px" }}
-      className="max-w-2xl mx-auto w-full overflow-y-auto"
+      style={{ height: "calc(100vh - 82px" }}
+      className="max-w-2xl mx-auto pt-4 w-full overflow-y-auto"
     >
       {chatMessages.map((message, index) => (
         <div key={index} className="p-2 rounded">
-          <p className="text-sm text-white bg-blue-400 mb-2 w-max px-2 ml-auto py-1 rounded max-w-sm">
-            {message.query}
-          </p>
-
-          <p className="text-sm text-white bg-blue-500 mb-2 w-max px-2 py-1 rounded max-w-sm">
-            {message.response}
-          </p>
+          <Message content={message.query} type="query" />
+          <Message content={message.response} type="response" />
         </div>
       ))}
     </div>
+  );
+};
+
+const Message = ({ content, type }) => {
+  const styling =
+    type === "query" ? "text-white bg-blue-500 ml-auto rounded-tr-none" : "text-black bg-white rounded-tl-none";
+  return (
+    <p className={`text-sm mb-3 w-max px-4 py-2 rounded-xl max-w-sm backdrop-blur-sm shadow-lg ${styling}`}>
+      {content}
+    </p>
   );
 };

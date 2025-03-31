@@ -21,7 +21,7 @@ export const Footer = () => {
   if (viewingSession !== liveSession) {
     return (
       <button
-        className="mx-auto rounded-full bg-red-400 p-2"
+        className="mx-auto rounded-full bg-white shadow border text-red-600 p-2 relative top-2"
         onClick={() => {
           deleteSession(viewingSession);
           setViewingSession(liveSession);
@@ -35,47 +35,58 @@ export const Footer = () => {
   }
 
   return (
-    <div className=" w-full max-w-2xl px-4 pb-1.5 mx-auto flex items-center gap-2">
-      <textarea
-        className="border resize-none border-gray-500 rounded px-2 py-1 flex-1 left-0"
-        ref={inputRef}
-        placeholder="Chat with your agent"
-      />
+    <div className="w-full relative bg-white mx-auto flex items-center shadow">
+      <div className="relative max-w-3xl py-4 mx-auto w-full">
+        <input
+          className="border rounded-3xl border-gray-300 pl-4 pr-24 py-3 w-full shadow-sm focus:shadow-md outline-none focus:border-black"
+          ref={inputRef}
+          placeholder="Chat with your agent"
+        />
 
-      <button
-        className="bg-gray-800 text-white w-max p-2 rounded-full"
-        onClick={() => {
-          const content = inputRef.current.value.trim();
-          if (content) {
-            sendWsMessage("text", { text: content });
-            inputRef.current.value = "";
-          }
-        }}
-      >
-        <Send size={18} />
-      </button>
+        <button
+          title="Hold to record audio"
+          onMouseDown={() => {
+            if (!isRecording) {
+              startRecording();
+            }
+          }}
+          onMouseUp={() => {
+            if (isRecording) {
+              stopRecording();
+            }
+          }}
+          className={`${
+            isRecording ? "bg-red-600" : "bg-gray-800"
+          } text-white w-max p-2 rounded-full absolute right-12 bottom-6`}
+        >
+          {isRecording ? <MicIcon size={18} /> : <MicOffIcon size={18} />}
+        </button>
 
-      <button
-        className={`${
-          isRecording ? "bg-red-600" : "bg-gray-800"
-        } text-white w-max p-2 rounded-full`}
-        onClick={() => {
-          if (isRecording) {
-            stopRecording();
-          } else {
-            startRecording();
-          }
-        }}
-      >
-        {isRecording ? <MicIcon size={18} /> : <MicOffIcon size={18} />}
-      </button>
-      <button
-        disabled={!isStreamingResponse}
-        onClick={stopStreamingResponse}
-        className="bg-red-600 text-white w-max p-2 rounded-full disabled:opacity-80 disabled:cursor-not-allowed"
-      >
-        <CircleStop />
-      </button>
+        {!isStreamingResponse ? (
+          <button
+            title="Send"
+            className="bg-gray-800 text-white w-max p-2 rounded-full absolute right-2 bottom-6"
+            onClick={() => {
+              const content = inputRef.current.value.trim();
+              if (content) {
+                sendWsMessage("text", { text: content });
+                inputRef.current.value = "";
+              }
+            }}
+          >
+            <Send size={18} />
+          </button>
+        ) : (
+          <button
+            title="Stop audio"
+            disabled={!isStreamingResponse}
+            onClick={stopStreamingResponse}
+            className="bg-red-600 text-white w-max p-2 rounded-full disabled:opacity-80 disabled:cursor-not-allowed right-2 absolute bottom-6"
+          >
+            <CircleStop size={18} />
+          </button>
+        )}
+      </div>
     </div>
   );
 };
