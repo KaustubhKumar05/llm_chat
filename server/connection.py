@@ -48,8 +48,6 @@ class Connection:
         self.frontend_ws = websocket
         self.is_connected = True
         await self.start_new_session()
-        
-
     async def handle_message(self, message: Dict[str, Any]) -> None:
         """Handle messages from frontend and route to appropriate service."""
         if not self.is_connected:
@@ -70,7 +68,11 @@ class Connection:
             transcript = self.db.fetch_transcript(session_id)
             print(transcript)
             await self.frontend_ws.send_json(
-                {"type": "transcripts", "transcripts": transcript}
+                {
+                    "type": "transcripts",
+                    "transcripts": transcript,
+                    "session_id": session_id,
+                }
             )
 
         elif message_type == "kill_streaming":

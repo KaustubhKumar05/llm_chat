@@ -10,6 +10,8 @@ export const useConnection = () => {
     setViewingSession,
     setIsLoading,
     setIsThinking,
+    sessionTranscriptsMap,
+    extendSessionTranscriptsMap,
   } = useCustomStore();
 
   const wsRef = useRef(null);
@@ -119,6 +121,10 @@ export const useConnection = () => {
               case "transcripts":
                 setTranscripts(message.transcripts);
                 setIsLoading(false);
+                extendSessionTranscriptsMap({
+                  id: message.session_id,
+                  transcripts: message.transcripts,
+                });
                 break;
               case "uuid":
                 setTranscripts([]);
@@ -128,7 +134,7 @@ export const useConnection = () => {
                 setIsLoading(false);
                 break;
               case "transcript_item":
-                setIsThinking(false)
+                setIsThinking(false);
                 setTranscripts((prev) => [
                   ...prev,
                   {
@@ -180,6 +186,11 @@ export const useConnection = () => {
   const getSessions = () => sendWsMessage("get_sessions");
   const getTranscripts = (id) => {
     setIsLoading(true);
+    if (sessionTranscriptsMap.has(id)) {
+      setTranscripts(sessionTranscriptsMap.get(id) || []);
+      setIsLoading(false);
+      return;
+    }
     sendWsMessage("get_transcripts", { id });
   };
   const deleteSession = (id) => sendWsMessage("delete_session", { id });

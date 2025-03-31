@@ -9,12 +9,16 @@ const useCustomStore = create((set) => {
 
   return {
     sessions: [],
-    sessionMap: new Map(),
+    sessionTranscriptsMap: new Map(),
     transcripts: [],
     isLoading: true,
     isThinking: false,
     liveSession: null,
     viewingSession: null,
+    extendSessionTranscriptsMap: (obj) =>
+      set((state) => ({
+        sessionTranscriptsMap: state.sessionTranscriptsMap.set(obj["id"], obj["transcripts"]),
+      })),
     setIsLoading: (val) => set({ isLoading: val }),
     setIsThinking: (val) => set({ isThinking: val }),
     setSessions: createSetter("sessions"),
