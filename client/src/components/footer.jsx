@@ -5,7 +5,7 @@ import useCustomStore from "../store";
 
 export const Footer = () => {
   const inputRef = useRef(null);
-  const { viewingSession, liveSession, setViewingSession } = useCustomStore();
+  const { viewingSession, liveSession, setViewingSession, setTranscripts, addDeletedSession } = useCustomStore();
   const {
     sendWsMessage,
     startRecording,
@@ -15,7 +15,6 @@ export const Footer = () => {
     isStreamingResponse,
     stopStreamingResponse,
     getTranscripts,
-    getSessions,
   } = useConnection();
 
   if (viewingSession !== liveSession) {
@@ -23,10 +22,11 @@ export const Footer = () => {
       <button
         className="mx-auto rounded-full bg-white shadow border text-red-600 p-2 relative top-2"
         onClick={() => {
+          addDeletedSession(viewingSession)
+          setTranscripts([]);
           deleteSession(viewingSession);
           setViewingSession(liveSession);
           getTranscripts(liveSession);
-          getSessions();
         }}
       >
         <Trash />
