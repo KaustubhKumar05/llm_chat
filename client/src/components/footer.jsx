@@ -10,7 +10,7 @@ export const Footer = () => {
     liveSession,
     setViewingSession,
     setTranscripts,
-    addDeletedSession,
+    setSessions,
     setIsThinking,
   } = useCustomStore();
   const {
@@ -29,7 +29,7 @@ export const Footer = () => {
       <button
         className="mx-auto rounded-full bg-white shadow border text-red-600 p-2 relative top-2"
         onClick={() => {
-          addDeletedSession(viewingSession);
+          setSessions((prev) => prev.filter((id) => id !== viewingSession));
           setTranscripts([]);
           deleteSession(viewingSession);
           setViewingSession(liveSession);

@@ -4,13 +4,8 @@ import useCustomStore from "../store";
 import { MessageCirclePlus } from "lucide-react";
 
 export const Sidebar = () => {
-  const {
-    sessions,
-    setViewingSession,
-    liveSession,
-    viewingSession,
-    deletedSessions,
-  } = useCustomStore();
+  const { sessions, setViewingSession, liveSession, viewingSession } =
+    useCustomStore();
   const { getSessions, getTranscripts, startNewSession } = useConnection();
 
   useEffect(() => {
@@ -33,30 +28,27 @@ export const Sidebar = () => {
         </button>
       </div>
       <div className="border-t pt-1 mt-2">
-        {[liveSession, ...sessions].map(
-          (session) =>
-            !deletedSessions.has(session) && (
-              <div
-                className={`truncate my-2 p-2 rounded-2xl flex items-center hover:bg-blue-100/50 text-xs font-medium cursor-pointer ${
-                  viewingSession === session
-                    ? "text-blue-800 bg-blue-100"
-                    : "text-black"
-                }`}
-                onClick={() => {
-                  setViewingSession(session);
-                  getTranscripts(session);
-                }}
-                key={session}
-              >
-                {session}
-                {session === liveSession ? (
-                  <div className="h-1 w-1 bg-blue-950 rounded-full ml-2" />
-                ) : (
-                  ""
-                )}
-              </div>
-            )
-        )}
+        {[liveSession, ...sessions].map((session) => (
+          <div
+            className={`truncate my-2 p-2 rounded-2xl flex items-center hover:bg-blue-100/50 text-xs font-medium cursor-pointer ${
+              viewingSession === session
+                ? "text-blue-800 bg-blue-100"
+                : "text-black"
+            }`}
+            onClick={() => {
+              setViewingSession(session);
+              getTranscripts(session);
+            }}
+            key={session}
+          >
+            {session}
+            {session === liveSession ? (
+              <div className="h-1 w-1 bg-blue-950 rounded-full ml-2" />
+            ) : (
+              ""
+            )}
+          </div>
+        ))}
       </div>
     </div>
   );
