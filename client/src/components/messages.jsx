@@ -19,7 +19,12 @@ export const Messages = () => {
 
   return (
     <div
-      style={{ height: "calc(100vh - 82px" }}
+      style={{
+        height:
+          liveSession === viewingSession
+            ? "calc(100vh - 78px)"
+            : "calc(100vh - 54px)",
+      }}
       className="max-w-3xl mx-auto pt-4 pr-2 w-full overflow-y-auto"
     >
       {isLoading ? (

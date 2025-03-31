@@ -37,7 +37,7 @@ export const Footer = () => {
   if (viewingSession !== liveSession) {
     return (
       <button
-        className="mx-auto rounded-full bg-white shadow border text-red-600 p-2 relative top-2"
+        className="mx-auto rounded-full bg-white shadow border text-red-600 p-2 relative bottom-2"
         onClick={() => {
           setSessions((prev) => prev.filter((id) => id !== viewingSession));
           setTranscripts([]);

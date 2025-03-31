@@ -1,12 +1,13 @@
 # FE setup
 
 ### TODO:
-- [x] STT
-- [x] Usable UI
-- [x] Refactor
+- [x] Chat UI
+- [x] Push to talk
 - [x] Transcripts
-- [x] Polish
+- [x] Optimistic deletes
+- [x] Cache transcripts
 - [ ] Audio playback cancel button
-- [ ] IndexedDB/LocalStorage
+- [ ] Context UI
+- [ ] IndexedDB / LocalStorage
 
 
