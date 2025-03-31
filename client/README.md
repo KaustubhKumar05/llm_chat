@@ -9,6 +9,8 @@
 - [ ] Audio playback cancel button
 - [ ] Context UI
 - [ ] Text only mode toggle
+- [ ] Rename chat
+- [ ] Continue past sessions
 - [ ] IndexedDB / LocalStorage
 
 

@@ -1,15 +1,11 @@
-## Generic voice agent
-
-### TODO:
+## Generic LLM interface
 
 - [ ] Features
-  - [x] Chat flow 
+
+  - [x] Chat flow
   - [x] Voice-in voice-out flow
   - [x] Store and display transcripts
+  - [ ] Rename chat
+  - [ ] Text only toggle
   - [ ] Scripting for specific flows
   - [ ] Error handling
-
-- [ ] Hosting, CI/CD
-- [ ] Cost, latency optimisations
-
-Iterate

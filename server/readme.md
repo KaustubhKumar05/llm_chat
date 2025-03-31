@@ -13,6 +13,7 @@ uvicorn main:app --reload
 - [x] Transcripts
 - [x] DB integration
 - [x] Chat context
+- [ ] Rename chat
 - [ ] Integrate asyncio
 - [ ] Scripting, agenda endpoint
 - [ ] Logging, analytics
