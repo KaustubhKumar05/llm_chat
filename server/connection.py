@@ -88,7 +88,7 @@ class Connection:
                 resp = self.llm.generate_response(current_uuid, text, "")
                 print("response received", resp)
                 await self.frontend_ws.send_json(
-                    {"type": "transcript_item", "transcript_item": resp}
+                    {"type": "transcript_item", "response": resp["response"]}
                 )
                 await self.stream_as_audio_response(current_uuid, resp["response"])
                 self.db.append_transcript(

@@ -24,6 +24,16 @@ export const Footer = () => {
     getTranscripts,
   } = useConnection();
 
+  const sendMessage = () => {
+    const content = inputRef.current.value.trim();
+    if (content) {
+      sendWsMessage("text", { text: content });
+      inputRef.current.value = "";
+      setTranscripts((prev) => [...prev, { query: content }]);
+      setIsThinking(true);
+    }
+  };
+
   if (viewingSession !== liveSession) {
     return (
       <button
@@ -45,10 +55,15 @@ export const Footer = () => {
     <div className="w-full relative bg-white mx-auto flex items-center shadow">
       <div className="relative max-w-3xl py-4 mx-auto w-full">
         <input
-          className="border rounded-3xl border-gray-300 pl-4 pr-24 py-3 w-full shadow-sm focus:shadow-md outline-none focus:border-black"
+          className="border rounded-3xl text-sm border-gray-300 pl-4 pr-24 py-3 w-full shadow-sm focus:shadow-md outline-none focus:border-black"
           ref={inputRef}
           autoFocus
-          placeholder="Chat with your agent"
+          onKeyDown={(e) => {
+            if (["Enter", "Return"].includes(e.key)) {
+              sendMessage();
+            }
+          }}
+          placeholder="How can I help you?"
         />
 
         <button
@@ -64,9 +79,10 @@ export const Footer = () => {
               setIsThinking(true);
             }
           }}
+          style={{ bottom: "22px" }}
           className={`${
             isRecording ? "bg-red-600" : "bg-gray-800"
-          } text-white w-max p-2 rounded-full absolute right-12 bottom-6`}
+          } text-white w-max p-2 rounded-full absolute right-12`}
         >
           {isRecording ? <MicIcon size={18} /> : <MicOffIcon size={18} />}
         </button>
@@ -74,15 +90,9 @@ export const Footer = () => {
         {!isStreamingResponse ? (
           <button
             title="Send"
-            className="bg-gray-800 text-white w-max p-2 rounded-full absolute right-2 bottom-6"
-            onClick={() => {
-              const content = inputRef.current.value.trim();
-              if (content) {
-                sendWsMessage("text", { text: content });
-                inputRef.current.value = "";
-                setIsThinking(true);
-              }
-            }}
+            className="bg-gray-800 text-white w-max p-2 rounded-full absolute right-2"
+            onClick={() => sendMessage()}
+            style={{ bottom: "22px" }}
           >
             <Send size={18} />
           </button>

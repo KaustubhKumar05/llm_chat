@@ -1,12 +1,26 @@
+import { useEffect, useRef } from "react";
 import useCustomStore from "../store";
 import { Loader } from "./loader";
 
 export const Messages = () => {
-  const { transcripts: chatMessages, isLoading, isThinking } = useCustomStore();
+  const {
+    transcripts: chatMessages,
+    isLoading,
+    isThinking,
+    liveSession,
+    viewingSession,
+  } = useCustomStore();
+  const finalRef = useRef(null);
+
+  useEffect(() => {
+    if (viewingSession === liveSession)
+      finalRef.current.scrollIntoView({ behaviour: "smooth" });
+  }, [chatMessages, viewingSession, liveSession]);
+
   return (
     <div
       style={{ height: "calc(100vh - 82px" }}
-      className="max-w-3xl mx-auto pt-4 w-full overflow-y-auto"
+      className="max-w-3xl mx-auto pt-4 pr-2 w-full overflow-y-auto"
     >
       {isLoading ? (
         <Loader />
@@ -14,11 +28,14 @@ export const Messages = () => {
         chatMessages.map((message, index) => (
           <div key={index} className="p-2 rounded">
             <Message content={message.query} type="query" />
-            <Message content={message.response} type="response" />
+            {message.response && (
+              <Message content={message.response} type="response" />
+            )}
           </div>
         ))
       )}
       {isThinking ? <Loader content="Thinking..." /> : ""}
+      <div ref={finalRef} />
     </div>
   );
 };

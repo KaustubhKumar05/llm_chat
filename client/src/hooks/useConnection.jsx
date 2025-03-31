@@ -135,13 +135,22 @@ export const useConnection = () => {
                 break;
               case "transcript_item":
                 setIsThinking(false);
-                setTranscripts((prev) => [
-                  ...prev,
-                  {
-                    query: message.transcript_item.query,
-                    response: message.transcript_item.response,
-                  },
-                ]);
+                setTranscripts((prev) => {
+                  // Text chat
+                  if (message.response) {
+                    const lastItem = prev[prev.length - 1];
+                    lastItem["response"] = message.response;
+                    return [...prev.slice(0, prev.length - 1), lastItem];
+                  }
+                  // Audio chat
+                  return [
+                    ...prev,
+                    {
+                      query: message.transcript_item.query,
+                      response: message.transcript_item.response,
+                    },
+                  ];
+                });
                 break;
               default:
                 console.log("Unhandled message type:", message.type);
