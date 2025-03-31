@@ -5,9 +5,8 @@
 - [x] Usable UI
 - [x] Refactor
 - [x] Transcripts
+- [x] Polish
 - [ ] Audio playback cancel button
-- [ ] Continuous audio
-- [ ] Polish
-- [ ] IndexedDB
+- [ ] IndexedDB/LocalStorage
 
 
