@@ -6,11 +6,11 @@ import { MessageCirclePlus } from "lucide-react";
 export const Sidebar = () => {
   const { sessions, setViewingSession, liveSession, viewingSession } =
     useCustomStore();
-  const { getSessions, getTranscripts } = useConnection();
+  const { getSessions, getTranscripts, startNewSession } = useConnection();
 
   useEffect(() => {
     getSessions();
-  }, []);
+  }, [liveSession]);
 
   return (
     <div className="bg-white/80 w-80 p-4 shrink-0 border-r">
@@ -18,7 +18,12 @@ export const Sidebar = () => {
         <h1 className="text-2xl font-extrabold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
           Chats
         </h1>
-        <button title="New chat" className="bg-blue-600 text-white p-2 rounded-full">
+        <button
+          title="New chat"
+          className="bg-blue-600 text-white p-2 rounded-full disabled:opacity-50 disabled:cursor-not-allowed"
+          onClick={() => startNewSession()}
+          disabled={!liveSession}
+        >
           <MessageCirclePlus size={18} />
         </button>
       </div>

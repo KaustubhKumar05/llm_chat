@@ -40,6 +40,7 @@ export const Footer = () => {
         <input
           className="border rounded-3xl border-gray-300 pl-4 pr-24 py-3 w-full shadow-sm focus:shadow-md outline-none focus:border-black"
           ref={inputRef}
+          autoFocus
           placeholder="Chat with your agent"
         />
 

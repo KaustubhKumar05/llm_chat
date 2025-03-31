@@ -114,6 +114,7 @@ export const useConnection = () => {
                 setTranscripts(message.transcripts);
                 break;
               case "uuid":
+                setTranscripts([]);
                 uuidRef.current = message.uuid || "";
                 setViewingSession(message.uuid);
                 setLiveSession(message.uuid);
@@ -153,6 +154,7 @@ export const useConnection = () => {
   const sendWsMessage = useCallback((type, data = {}) => {
     const attemptSend = () => {
       if (wsRef.current && wsRef.current.readyState === 1) {
+        console.log("debug> sending ws message", data);
         wsRef.current.send(
           JSON.stringify({ type, ...data, uuid: uuidRef.current })
         );
@@ -165,6 +167,7 @@ export const useConnection = () => {
     attemptSend();
   }, []);
 
+  const startNewSession = () => sendWsMessage("new_session");
   const getSessions = () => sendWsMessage("get_sessions");
   const getTranscripts = (id) => sendWsMessage("get_transcripts", { id });
   const deleteSession = (id) => sendWsMessage("delete_session", { id });
@@ -244,5 +247,6 @@ export const useConnection = () => {
     stopStreamingResponse,
     isStreamingResponse,
     isRecording,
+    startNewSession,
   };
 };

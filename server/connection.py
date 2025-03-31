@@ -36,15 +36,19 @@ class Connection:
         self.user_identifier_map = {}
         self.kill_streaming = {}
 
+    async def start_new_session(self) -> None:
+        user_identifier = str(uuid.uuid4())
+        self.user_identifier_map[user_identifier] = 0
+        await self.frontend_ws.send_json({"type": "uuid", "uuid": user_identifier})
+        print("sent uuid", user_identifier)
+
     async def connect(self, websocket: WebSocket) -> None:
         """Initialize connection with frontend."""
         await websocket.accept()
         self.frontend_ws = websocket
         self.is_connected = True
-        user_identifier = str(uuid.uuid4())
-        self.user_identifier_map[user_identifier] = 0
-        await self.frontend_ws.send_json({"type": "uuid", "uuid": user_identifier})
-        print("sent uuid", user_identifier)
+        await self.start_new_session()
+        
 
     async def handle_message(self, message: Dict[str, Any]) -> None:
         """Handle messages from frontend and route to appropriate service."""
@@ -54,7 +58,10 @@ class Connection:
         message_type = message.get("type")
         current_uuid = message.get("uuid")
 
-        if message_type == "get_sessions":
+        if message_type == "new_session":
+            await self.start_new_session()
+
+        elif message_type == "get_sessions":
             sessions = self.db.list_sessions()
             await self.frontend_ws.send_json({"type": "sessions", "sessions": sessions})
 
