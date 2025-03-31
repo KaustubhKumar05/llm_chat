@@ -192,7 +192,11 @@ export const useConnection = () => {
   }, []);
 
   const startNewSession = () => sendWsMessage("new_session");
+  const setTTS = (value) => sendWsMessage("set_tts", { value });
   const getSessions = () => sendWsMessage("get_sessions");
+  const deleteSession = (id) => sendWsMessage("delete_session", { id });
+  const stopStreamingResponse = () => sendWsMessage("kill_streaming");
+
   const getTranscripts = (id) => {
     setIsLoading(true);
     if (sessionTranscriptsMap.has(id)) {
@@ -202,7 +206,6 @@ export const useConnection = () => {
     }
     sendWsMessage("get_transcripts", { id });
   };
-  const deleteSession = (id) => sendWsMessage("delete_session", { id });
 
   const startRecording = async () => {
     try {
@@ -266,8 +269,6 @@ export const useConnection = () => {
     }
   };
 
-  const stopStreamingResponse = () => sendWsMessage("kill_streaming");
-
   return {
     ws: wsRef.current,
     sendWsMessage,
@@ -280,5 +281,6 @@ export const useConnection = () => {
     isStreamingResponse,
     isRecording,
     startNewSession,
+    setTTS,
   };
 };

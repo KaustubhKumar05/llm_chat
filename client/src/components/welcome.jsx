@@ -1,10 +1,14 @@
 import useCustomStore from "../store";
 
 export const Welcome = () => {
-  const { liveSession, viewingSession, transcripts, isLoading } =
+  const { liveSession, viewingSession, transcripts, isLoading, isThinking } =
     useCustomStore();
+
   const showWelcomeMessage =
-    !isLoading && liveSession === viewingSession && transcripts.length === 0;
+    !isLoading &&
+    !isThinking &&
+    liveSession === viewingSession &&
+    transcripts.length === 0;
 
   if (!showWelcomeMessage) return <></>;
 
@@ -16,7 +20,9 @@ export const Welcome = () => {
           <span className="text-blue-800">Push to talk </span>or use the{" "}
           <span className="text-blue-800">chat interface</span>
         </p>
-        <p className="mt-1 text-center font-medium">to interact with the agent.</p>
+        <p className="mt-1 text-center font-medium">
+          to interact with the agent.
+        </p>
       </div>
     </div>
   );

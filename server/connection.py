@@ -35,6 +35,7 @@ class Connection:
         # ID to count map to keep track of each audio message
         self.user_identifier_map = {}
         self.kill_streaming = {}
+        self.enable_tts = {}
 
     async def start_new_session(self) -> None:
         user_identifier = str(uuid.uuid4())
@@ -48,6 +49,7 @@ class Connection:
         self.frontend_ws = websocket
         self.is_connected = True
         await self.start_new_session()
+
     async def handle_message(self, message: Dict[str, Any]) -> None:
         """Handle messages from frontend and route to appropriate service."""
         if not self.is_connected:
@@ -55,9 +57,16 @@ class Connection:
 
         message_type = message.get("type")
         current_uuid = message.get("uuid")
+        print(f"{current_uuid=}")
 
         if message_type == "new_session":
             await self.start_new_session()
+
+        elif message_type == "set_tts":
+            print("enable_tts before", self.enable_tts)
+            value = message.get("value", False)
+            self.enable_tts[current_uuid] = value
+            print("enable_tts", self.enable_tts)
 
         elif message_type == "get_sessions":
             sessions = self.db.list_sessions()
@@ -66,7 +75,6 @@ class Connection:
         elif message_type == "get_transcripts":
             session_id = message.get("id")
             transcript = self.db.fetch_transcript(session_id)
-            print(transcript)
             await self.frontend_ws.send_json(
                 {
                     "type": "transcripts",
@@ -77,20 +85,22 @@ class Connection:
 
         elif message_type == "kill_streaming":
             self.kill_streaming[current_uuid] = True
-            print(f"killing stream for {current_uuid=}")
+            # print(f"killing stream for {current_uuid=}")
 
         elif message_type == "text":
             self._increment_uuid_counter(current_uuid)
 
             text = message.get("text", "")
-            print("text received", text)
+            # print("text received", text)
             if text:
                 resp = self.llm.generate_response(current_uuid, text, "")
-                print("response received", resp)
+
                 await self.frontend_ws.send_json(
                     {"type": "transcript_item", "response": resp["response"]}
                 )
+
                 await self.stream_as_audio_response(current_uuid, resp["response"])
+
                 self.db.append_transcript(
                     current_uuid, {"query": resp["query"], "response": resp["response"]}
                 )
@@ -108,7 +118,7 @@ class Connection:
             file_name = f"media/{count}-{current_uuid}.mp3"
             audio_data = message.get("audio")
 
-            print("Audio data received")
+            # print("Audio data received")
 
             if audio_data:
                 base64_data = (
@@ -130,7 +140,7 @@ class Connection:
                     file_name,
                 )
 
-                print("response received", resp, f"{file_name=}")
+                # print("response received", resp, f"{file_name=}")
                 await self.frontend_ws.send_json(
                     {"type": "transcript_item", "transcript_item": resp}
                 )
@@ -151,6 +161,13 @@ class Connection:
         try:
             buffer = bytearray()
             chunk_count = 0
+
+            if current_uuid not in self.enable_tts:
+                self.enable_tts[current_uuid] = False
+
+            if not self.enable_tts.get(current_uuid, False):
+                print(f"tts response disabled, returning for {current_uuid=}", self.enable_tts)
+                return
 
             await self.frontend_ws.send_json(
                 {"type": "tts_start", "message": "Starting TTS processing"}
