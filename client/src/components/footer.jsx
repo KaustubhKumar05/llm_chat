@@ -7,7 +7,7 @@ import {
   Send,
   CircleStop,
   Volume2,
-  VolumeX
+  VolumeX,
 } from "lucide-react";
 import useCustomStore from "../store";
 
@@ -120,7 +120,8 @@ export const Footer = () => {
             title="Stop audio"
             disabled={!isStreamingResponse}
             onClick={stopStreamingResponse}
-            className="bg-red-600 text-white w-max p-2 rounded-full disabled:opacity-80 disabled:cursor-not-allowed right-2 absolute bottom-6"
+            style={{ bottom: "22px" }}
+            className="bg-red-600 text-white w-max p-2 rounded-full disabled:opacity-80 disabled:cursor-not-allowed right-2 absolute"
           >
             <CircleStop size={18} />
           </button>
