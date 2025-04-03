@@ -16,9 +16,14 @@ const useCustomStore = create((set) => {
     isThinking: false,
     liveSession: null,
     viewingSession: null,
+    context: "",
+    setContext: (val) => set({ context: val }),
     extendSessionTranscriptsMap: (obj) =>
       set((state) => ({
-        sessionTranscriptsMap: state.sessionTranscriptsMap.set(obj["id"], obj["transcripts"]),
+        sessionTranscriptsMap: state.sessionTranscriptsMap.set(
+          obj["id"],
+          obj["transcripts"]
+        ),
       })),
     setIsLoading: (val) => set({ isLoading: val }),
     setIsThinking: (val) => set({ isThinking: val }),

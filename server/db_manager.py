@@ -39,7 +39,7 @@ class AbstractDBManager(ABC):
         pass
 
     @abstractmethod
-    def append_context(self, session_id: int, context_updates: Dict) -> bool:
+    def update_context(self, session_id: int, context_updates: Dict) -> bool:
         """Append or update context key-value pairs for a session.
         Creates a new context if session_id doesn't exist, otherwise updates existing context."""
         pass
@@ -145,7 +145,7 @@ class DBManager(AbstractDBManager):
             print(f"Error listing call scripts: {str(e)}")
             return []
 
-    def append_context(self, session_id: str, updated_context: str) -> bool:
+    def update_context(self, session_id: str, updated_context: str) -> bool:
         """Append or update context data for a session.
         Creates a new context if session_id doesn't exist, otherwise updates existing context."""
         try:

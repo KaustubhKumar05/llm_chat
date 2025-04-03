@@ -21,7 +21,9 @@ class LLM(ABC):
         return self.model_name
 
     @abstractmethod
-    def generate_response(self, uuid: str, prompt: str, audio_path: Optional[str]) -> str:
+    def generate_response(
+        self, uuid: str, prompt: str, audio_path: Optional[str]
+    ) -> str:
         pass
 
 
@@ -35,13 +37,15 @@ class GeminiLLM(LLM):
         self.context = dict()
         self.last_response = dict()
 
-    def generate_response(self, uuid: str, prompt: str, audio_path: Optional[str]) -> dict:
+    def generate_response(
+        self, uuid: str, prompt: str, audio_path: Optional[str]
+    ) -> dict:
         try:
             audio_file = ""
             if audio_path:
                 audio_file = self.client.files.upload(file=audio_path)
                 self.logger.debug("Uploaded audio file: %s", audio_file)
-            
+
             # Initialize context and last_response for new UUIDs
             if uuid not in self.context:
                 self.context[uuid] = ""
@@ -50,13 +54,18 @@ class GeminiLLM(LLM):
 
             response = self.client.models.generate_content(
                 model=self.model_name,
-                contents=[(self.prompt_prefix + prompt), audio_file, "Last AI response: " + self.last_response[uuid], "Context: " + self.context[uuid]],
+                contents=[
+                    (self.prompt_prefix + prompt),
+                    audio_file,
+                    "Last AI response: " + self.last_response[uuid],
+                    "Context: " + self.context[uuid],
+                ],
                 # Cache the conversation structure
                 # Get checklist of required details each time, store as context
                 config={
                     "response_mime_type": "application/json",
                     "response_schema": TranscriptItem,
-                    "system_instruction": "You will be provided a text or audio prompt with some context and a last response so you remember the flow of the conversation. The prompts contain queries which you should respond to. The queries might refer to something in the context but not necessarily. Always return a summary as context of the current exchange only, not the past ones. Your response will be fed to a TTS engine so avoid characters like *"
+                    "system_instruction": "You will be provided a text or audio prompt with some context and a last response so you remember the flow of the conversation. The prompts contain queries which you should respond to. The queries might refer to something in the context but not necessarily. Always return a summary as context of the current exchange only, not the past ones. Your response will be fed to a TTS engine so avoid asterisks and similar special characters. Make sure the context is succint while not losing any details",
                 },
             )
 

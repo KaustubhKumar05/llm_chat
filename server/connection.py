@@ -134,20 +134,21 @@ class Connection:
 
                 if message_type == "text":
                     await self.frontend_ws.send_json(
-                        {"type": "transcript_item", "response": resp["response"]}
+                        {"type": "transcript_item", "response": resp["response"], "context": resp["context"]}
                     )
                 else:
                     await self.frontend_ws.send_json(
-                        {"type": "transcript_item", "transcript_item": resp}
+                        {"type": "transcript_item", "transcript_item": resp, "context": resp["context"]}
                     )
 
                 await self.stream_as_audio_response(current_uuid, resp["response"])
+
                 self.db.append_transcript(
                     current_uuid, {"query": resp["query"], "response": resp["response"]}
                 )
-                print("context?", resp)
+
                 if resp["context"]:
-                    self.db.append_context(current_uuid, resp["context"])
+                    self.db.update_context(current_uuid, resp["context"])
 
             case _:
                 await self.frontend_ws.send_json(

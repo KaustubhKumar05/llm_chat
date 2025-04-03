@@ -21,6 +21,7 @@ export const ConnectionProvider = ({ children }) => {
     setIsThinking,
     sessionTranscriptsMap,
     extendSessionTranscriptsMap,
+    setContext,
   } = useCustomStore();
 
   const wsRef = useRef(null);
@@ -124,6 +125,7 @@ export const ConnectionProvider = ({ children }) => {
                 break;
               case "transcript_item":
                 setIsThinking(false);
+                setContext(message.context)
                 setTranscripts((prev) => {
                   if (message.response) {
                     const lastItem = prev[prev.length - 1];
