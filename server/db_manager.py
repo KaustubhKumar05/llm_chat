@@ -145,28 +145,22 @@ class DBManager(AbstractDBManager):
             print(f"Error listing call scripts: {str(e)}")
             return []
 
-    def append_context(self, session_id: int, context_updates: Dict) -> bool:
-        """Append or update context key-value pairs for a session.
+    def append_context(self, session_id: str, updated_context: str) -> bool:
+        """Append or update context data for a session.
         Creates a new context if session_id doesn't exist, otherwise updates existing context."""
         try:
             context_key = f"session:{session_id}:context"
-            context_json = self.redis_client.get(context_key) or "{}"
-            context = json.loads(context_json)
-
-            context.update(context_updates)
-
-            self.redis_client.set(context_key, json.dumps(context))
+            self.redis_client.set(context_key, updated_context)
             return True
         except Exception as e:
             print(f"Error appending context: {str(e)}")
             return False
 
-    def get_context(self, session_id: str) -> Optional[Dict]:
+    def get_context(self, session_id: str) -> Optional[str]:
         """Get the entire context object for a session."""
         try:
             context_key = f"session:{session_id}:context"
-            context_json = self.redis_client.get(context_key)
-            return json.loads(context_json) if context_json else {}
+            return self.redis_client.get(context_key) or ""
         except Exception as e:
             print(f"Error fetching context: {str(e)}")
             return None

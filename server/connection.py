@@ -59,101 +59,103 @@ class Connection:
         current_uuid = message.get("uuid")
         print(f"{current_uuid=}")
 
-        if message_type == "new_session":
-            await self.start_new_session()
+        match message_type:
+            case "new_session":
+                await self.start_new_session()
+                return
 
-        elif message_type == "set_tts":
-            value = message.get("value", True)
-            self.enable_tts[current_uuid] = value
+            case "set_tts":
+                value = message.get("value", True)
+                self.enable_tts[current_uuid] = value
+                return
 
-        elif message_type == "get_sessions":
-            sessions = self.db.list_sessions()
-            await self.frontend_ws.send_json({"type": "sessions", "sessions": sessions})
-
-        elif message_type == "get_transcripts":
-            session_id = message.get("id")
-            transcript = self.db.fetch_transcript(session_id)
-            context = self.db.get_context(session_id)
-            print("convo context", context, transcript)
-            await self.frontend_ws.send_json(
-                {
-                    "type": "transcripts",
-                    "transcripts": transcript,
-                    "session_id": session_id,
-                }
-            )
-
-        elif message_type == "kill_streaming":
-            self.kill_streaming[current_uuid] = True
-            # print(f"killing stream for {current_uuid=}")
-
-        elif message_type == "text":
-            self._increment_uuid_counter(current_uuid)
-
-            text = message.get("text", "")
-            # print("text received", text)
-            if text:
-                resp = self.llm.generate_response(current_uuid, text, "")
-
+            case "get_sessions":
+                sessions = self.db.list_sessions()
                 await self.frontend_ws.send_json(
-                    {"type": "transcript_item", "response": resp["response"]}
+                    {"type": "sessions", "sessions": sessions}
                 )
+                return
 
-                await self.stream_as_audio_response(current_uuid, resp["response"])
-
-                self.db.append_transcript(
-                    current_uuid, {"query": resp["query"], "response": resp["response"]}
-                )
-
-        elif message_type == "delete_session":
-            session_id = message.get("id")
-            if self.db.delete_session(session_id):
+            case "get_transcripts":
+                session_id = message.get("id")
+                transcript = self.db.fetch_transcript(session_id)
+                context = self.db.get_context(session_id)
+                print("convo context", context, transcript)
                 await self.frontend_ws.send_json(
-                    {"type": "session_deleted", "id": session_id}
+                    {
+                        "type": "transcripts",
+                        "transcripts": transcript,
+                        "session_id": session_id,
+                    }
                 )
+                return
 
-        elif message_type == "audio":
-            self._increment_uuid_counter(current_uuid)
-            count = self.user_identifier_map[current_uuid]
-            file_name = f"media/{count}-{current_uuid}.mp3"
-            audio_data = message.get("audio")
+            case "kill_streaming":
+                self.kill_streaming[current_uuid] = True
+                return
 
-            # print("Audio data received")
+            case "delete_session":
+                session_id = message.get("id")
+                if self.db.delete_session(session_id):
+                    await self.frontend_ws.send_json(
+                        {"type": "session_deleted", "id": session_id}
+                    )
+                return
 
-            if audio_data:
-                base64_data = (
-                    audio_data.split("base64,")[1]
-                    if "base64," in audio_data
-                    else audio_data
-                )
-                decoded_audio = base64.b64decode(base64_data)
-                self.audio_buffer.extend(decoded_audio)
+            case "text" | "audio":
+                self._increment_uuid_counter(current_uuid)
+                text = message.get("text", "")
+                file_name = ""
+                if message_type == "audio":
+                    count = self.user_identifier_map[current_uuid]
+                    file_name = f"media/{count}-{current_uuid}.mp3"
+                    audio_data = message.get("audio")
 
-            if message.get("final", False):
-                with open(file_name, "wb") as f:
-                    f.write(bytes(self.audio_buffer))
-                self.logger.debug("Saved audio file as %s", file_name)
-                self.audio_buffer.clear()
+                    if audio_data:
+                        base64_data = (
+                            audio_data.split("base64,")[1]
+                            if "base64," in audio_data
+                            else audio_data
+                        )
+                        decoded_audio = base64.b64decode(base64_data)
+                        self.audio_buffer.extend(decoded_audio)
+
+                    if message.get("final", False):
+                        with open(file_name, "wb") as f:
+                            f.write(bytes(self.audio_buffer))
+                        self.logger.debug("Saved audio file as %s", file_name)
+                        self.audio_buffer.clear()
+
                 resp = self.llm.generate_response(
                     current_uuid,
-                    "",
+                    text,
                     file_name,
                 )
 
-                await self.frontend_ws.send_json(
-                    {"type": "transcript_item", "transcript_item": resp}
-                )
+                if message_type == "text":
+                    await self.frontend_ws.send_json(
+                        {"type": "transcript_item", "response": resp["response"]}
+                    )
+                else:
+                    await self.frontend_ws.send_json(
+                        {"type": "transcript_item", "transcript_item": resp}
+                    )
+
                 await self.stream_as_audio_response(current_uuid, resp["response"])
                 self.db.append_transcript(
                     current_uuid, {"query": resp["query"], "response": resp["response"]}
                 )
+                print("context?", resp)
                 if resp["context"]:
                     self.db.append_context(current_uuid, resp["context"])
 
-        else:
-            await self.frontend_ws.send_json(
-                {"type": "error", "message": f"Unknown message type: {message_type}"}
-            )
+            case _:
+                await self.frontend_ws.send_json(
+                    {
+                        "type": "error",
+                        "message": f"Unknown message type: {message_type}",
+                    }
+                )
 
     async def stream_as_audio_response(self, current_uuid: str, text: str) -> None:
         """Process text-to-speech conversion and stream to frontend."""
