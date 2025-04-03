@@ -6,8 +6,8 @@
 - [x] Transcripts
 - [x] Optimistic deletes
 - [x] Cache transcripts
+- [x] Context UI
 - [ ] Audio playback cancel button
-- [ ] Context UI
 - [ ] Text only mode toggle
 - [ ] Rename chat
 - [ ] Continue past sessions

@@ -68,7 +68,6 @@ export const ConnectionProvider = ({ children }) => {
 
       socket.onopen = () => {
         if (wsRef.current) return;
-        console.log("WebSocket connection established");
         wsRef.current = socket;
       };
 
@@ -89,9 +88,6 @@ export const ConnectionProvider = ({ children }) => {
           audioBuffer.getChannelData(0).set(floatData);
 
           audioQueueRef.current.push(audioBuffer);
-          console.log(
-            `debug> Added audio to queue. Queue length: ${audioQueueRef.current.length}`
-          );
 
           if (!isPlayingRef.current) playNextInQueue();
         } else {
@@ -125,7 +121,7 @@ export const ConnectionProvider = ({ children }) => {
                 break;
               case "transcript_item":
                 setIsThinking(false);
-                setContext(message.context)
+                setContext(message.context);
                 setTranscripts((prev) => {
                   if (message.response) {
                     const lastItem = prev[prev.length - 1];

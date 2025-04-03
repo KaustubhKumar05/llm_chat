@@ -41,7 +41,6 @@ class Connection:
         user_identifier = str(uuid.uuid4())
         self.user_identifier_map[user_identifier] = 0
         await self.frontend_ws.send_json({"type": "uuid", "uuid": user_identifier})
-        print("sent uuid", user_identifier)
 
     async def connect(self, websocket: WebSocket) -> None:
         """Initialize connection with frontend."""
@@ -57,7 +56,6 @@ class Connection:
 
         message_type = message.get("type")
         current_uuid = message.get("uuid")
-        print(f"{current_uuid=}")
 
         match message_type:
             case "new_session":
@@ -80,7 +78,7 @@ class Connection:
                 session_id = message.get("id")
                 transcript = self.db.fetch_transcript(session_id)
                 context = self.db.get_context(session_id)
-                print("convo context", context, transcript)
+                print(f"\nData fetched: {context=} {transcript=}")
                 await self.frontend_ws.send_json(
                     {
                         "type": "transcripts",
@@ -167,12 +165,12 @@ class Connection:
             # if current_uuid not in self.enable_tts:
             #     self.enable_tts[current_uuid] = False
 
-            if not self.enable_tts.get(current_uuid, True):
-                print(
-                    f"tts response disabled, returning for {current_uuid=}",
-                    self.enable_tts,
-                )
-                return
+            # if not self.enable_tts.get(current_uuid, True):
+            #     print(
+            #         f"tts response disabled, returning for {current_uuid=}",
+            #         self.enable_tts,
+            #     )
+            #     return
 
             await self.frontend_ws.send_json(
                 {"type": "tts_start", "message": "Starting TTS processing"}

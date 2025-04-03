@@ -72,7 +72,7 @@ class GeminiLLM(LLM):
             jsonresp = json.loads(response.text)
             self.context[uuid] += jsonresp["context"]
             self.last_response[uuid] = jsonresp["response"]
-            print(f"\n Context: {self.context[uuid]} \n")
+            print(f"\nContext: {self.context[uuid]} \n")
 
             return jsonresp
         except Exception as e:
