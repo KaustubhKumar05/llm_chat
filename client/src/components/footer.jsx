@@ -1,6 +1,14 @@
 import { useRef } from "react";
 import { useConnection } from "../hooks/useConnection";
-import { Trash, MicIcon, MicOffIcon, Send, CircleStop } from "lucide-react";
+import {
+  Trash,
+  MicIcon,
+  MicOffIcon,
+  Send,
+  CircleStop,
+  Volume2,
+  VolumeX
+} from "lucide-react";
 import useCustomStore from "../store";
 
 export const Footer = () => {
@@ -13,6 +21,7 @@ export const Footer = () => {
     setSessions,
     setIsThinking,
   } = useCustomStore();
+
   const {
     sendWsMessage,
     startRecording,
@@ -22,6 +31,7 @@ export const Footer = () => {
     isStreamingResponse,
     stopStreamingResponse,
     getTranscripts,
+    // setTTS,
   } = useConnection();
 
   const sendMessage = () => {
@@ -53,9 +63,18 @@ export const Footer = () => {
 
   return (
     <div className="w-full relative bg-white mx-auto flex items-center shadow">
-      <div className="relative max-w-3xl py-4 mx-auto w-full">
+      <div
+        title="Audio response"
+        className="relative max-w-3xl py-4 mx-auto w-full"
+      >
+        <button
+          style={{ top: "22px" }}
+          className="bg-gray-800 text-white w-max p-2 rounded-full absolute left-2"
+        >
+          <Volume2 size={18} />
+        </button>
         <input
-          className="border rounded-3xl text-sm border-gray-300 pl-4 pr-24 py-3 w-full shadow-sm focus:shadow-md outline-none focus:border-black"
+          className="border rounded-3xl text-sm border-gray-300 pl-12 pr-24 py-3 w-full shadow-sm focus:shadow-md outline-none focus:border-black"
           ref={inputRef}
           autoFocus
           onKeyDown={(e) => {

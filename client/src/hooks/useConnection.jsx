@@ -1,8 +1,17 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  createContext,
+  useContext,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { WS_ENDPOINT } from "../constants";
 import useCustomStore from "../store";
 
-export const useConnection = () => {
+const ConnectionContext = createContext(null);
+
+export const ConnectionProvider = ({ children }) => {
   const {
     setTranscripts,
     setSessions,
@@ -15,6 +24,7 @@ export const useConnection = () => {
   } = useCustomStore();
 
   const wsRef = useRef(null);
+  const wsEndpointCalled = useRef(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isStreamingResponse, setIsStreamingResponse] = useState(false);
 
@@ -23,11 +33,8 @@ export const useConnection = () => {
   const isPlayingRef = useRef(false);
   const continueRecordingRef = useRef(true);
   const mediaRecorderRef = useRef(null);
-
-  // This is sent to the BE with each request for identification
   const uuidRef = useRef(null);
 
-  // Function to play the next audio buffer in the queue
   const playNextInQueue = () => {
     if (audioQueueRef.current.length === 0) {
       isPlayingRef.current = false;
@@ -37,74 +44,56 @@ export const useConnection = () => {
     isPlayingRef.current = true;
     const audioBuffer = audioQueueRef.current.shift();
     const audioContext = audioContextRef.current;
-
     const source = audioContext.createBufferSource();
     source.buffer = audioBuffer;
     source.connect(audioContext.destination);
 
     source.start();
-
-    source.onended = () => {
-      playNextInQueue();
-    };
+    source.onended = () => playNextInQueue();
   };
 
   useEffect(() => {
     audioContextRef.current = new (window.AudioContext ||
       window.webkitAudioContext)();
     let socket;
-    if (!wsRef.current) {
+
+    if (!wsRef.current && !wsEndpointCalled.current) {
+      wsEndpointCalled.current = true;
       socket = new WebSocket(WS_ENDPOINT);
 
-      socket.onerror = (error) => {
-        console.error("WebSocket error:", error);
-      };
-
-      socket.onclose = (event) => {
+      socket.onerror = (error) => console.error("WebSocket error:", error);
+      socket.onclose = (event) =>
         console.log("WebSocket closed:", event.code, event.reason);
-      };
 
       socket.onopen = () => {
+        if (wsRef.current) return;
         console.log("WebSocket connection established");
         wsRef.current = socket;
       };
 
       socket.onmessage = async (event) => {
         if (event.data instanceof Blob) {
-          // Handle PCM audio data
           const audioData = await event.data.arrayBuffer();
-
-          // Convert PCM data to audio buffer
           const audioContext = audioContextRef.current;
           const pcmData = new Int16Array(audioData);
           const floatData = new Float32Array(pcmData.length);
-
-          // Convert from 16-bit integer to float in range [-1, 1]
-          for (let i = 0; i < pcmData.length; i++) {
+          for (let i = 0; i < pcmData.length; i++)
             floatData[i] = pcmData[i] / 32768.0;
-          }
 
-          // Create an audio buffer (44.1kHz mono)
           const audioBuffer = audioContext.createBuffer(
             1,
             floatData.length,
             44100
           );
-
-          // Fill the buffer
           audioBuffer.getChannelData(0).set(floatData);
 
-          // Add to queue and play if not already playing
           audioQueueRef.current.push(audioBuffer);
           console.log(
             `debug> Added audio to queue. Queue length: ${audioQueueRef.current.length}`
           );
 
-          if (!isPlayingRef.current) {
-            playNextInQueue();
-          }
+          if (!isPlayingRef.current) playNextInQueue();
         } else {
-          console.log("debug> Receiving server message:", event.data);
           try {
             const message = JSON.parse(event.data);
             switch (message.type) {
@@ -136,13 +125,11 @@ export const useConnection = () => {
               case "transcript_item":
                 setIsThinking(false);
                 setTranscripts((prev) => {
-                  // Text chat
                   if (message.response) {
                     const lastItem = prev[prev.length - 1];
                     lastItem["response"] = message.response;
                     return [...prev.slice(0, prev.length - 1), lastItem];
                   }
-                  // Audio chat
                   return [
                     ...prev,
                     {
@@ -155,7 +142,6 @@ export const useConnection = () => {
               default:
                 console.log("Unhandled message type:", message.type);
             }
-            console.log({ message });
           } catch (e) {
             console.log("Non-JSON message:", e);
           }
@@ -164,48 +150,43 @@ export const useConnection = () => {
     }
 
     return () => {
-      if (socket.readyState === WebSocket.OPEN) {
-        socket.close();
-      }
+      if (socket.readyState === WebSocket.OPEN) socket.close();
       wsRef.current = null;
-      // Close audio context on cleanup
-      if (audioContextRef.current) {
-        audioContextRef.current.close();
-      }
+      uuidRef.current = null;
+      if (audioContextRef.current) audioContextRef.current.close();
     };
   }, []);
 
   const sendWsMessage = useCallback((type, data = {}) => {
     const attemptSend = () => {
       if (wsRef.current && wsRef.current.readyState === 1) {
-        console.log("debug> sending ws message", data);
+        console.log("debug> sending ws message", data, type);
         wsRef.current.send(
           JSON.stringify({ type, ...data, uuid: uuidRef.current })
         );
         return;
       }
-
       setTimeout(() => attemptSend(), 10);
     };
-
     attemptSend();
   }, []);
 
   const startNewSession = () => sendWsMessage("new_session");
-  const setTTS = (value) => sendWsMessage("set_tts", { value });
   const getSessions = () => sendWsMessage("get_sessions");
-  const deleteSession = (id) => sendWsMessage("delete_session", { id });
-  const stopStreamingResponse = () => sendWsMessage("kill_streaming");
+  const setTTS = (value) => sendWsMessage("set_tts", { value });
 
   const getTranscripts = (id) => {
     setIsLoading(true);
     if (sessionTranscriptsMap.has(id)) {
       setTranscripts(sessionTranscriptsMap.get(id) || []);
+      sendWsMessage("get_transcripts", { id });
       setIsLoading(false);
       return;
     }
     sendWsMessage("get_transcripts", { id });
   };
+
+  const deleteSession = (id) => sendWsMessage("delete_session", { id });
 
   const startRecording = async () => {
     try {
@@ -218,15 +199,12 @@ export const useConnection = () => {
           event.data.size > 0 &&
           wsRef.current.readyState === WebSocket.OPEN
         ) {
-          // Convert blob to base64
           const buffer = await event.data.arrayBuffer();
           const base64Data = btoa(
             String.fromCharCode(...new Uint8Array(buffer))
           );
-          // Needed to prevent a race condition where the final message is sent before the final audio chunk
-          if (!continueRecordingRef.current) {
-            return;
-          }
+
+          if (!continueRecordingRef.current) return;
 
           wsRef.current.send(
             JSON.stringify({
@@ -252,15 +230,10 @@ export const useConnection = () => {
         .getTracks()
         .forEach((track) => track.stop());
       setIsRecording(false);
-
       continueRecordingRef.current = false;
 
       wsRef.current.send(
-        JSON.stringify({
-          type: "audio",
-          final: true,
-          uuid: uuidRef.current,
-        })
+        JSON.stringify({ type: "audio", final: true, uuid: uuidRef.current })
       );
       // Ideally this should happen after the model responds
       setTimeout(() => {
@@ -269,18 +242,32 @@ export const useConnection = () => {
     }
   };
 
-  return {
-    ws: wsRef.current,
-    sendWsMessage,
-    startRecording,
-    deleteSession,
-    stopRecording,
-    getSessions,
-    getTranscripts,
-    stopStreamingResponse,
-    isStreamingResponse,
-    isRecording,
-    startNewSession,
-    setTTS,
-  };
+  const stopStreamingResponse = () => sendWsMessage("kill_streaming");
+
+  return (
+    <ConnectionContext.Provider
+      value={{
+        sendWsMessage,
+        startRecording,
+        stopRecording,
+        getSessions,
+        getTranscripts,
+        deleteSession,
+        stopStreamingResponse,
+        startNewSession,
+        setTTS,
+        isRecording,
+        isStreamingResponse,
+      }}
+    >
+      {children}
+    </ConnectionContext.Provider>
+  );
+};
+
+export const useConnection = () => {
+  const context = useContext(ConnectionContext);
+  if (!context)
+    throw new Error("useConnection must be used within a ConnectionProvider");
+  return context;
 };

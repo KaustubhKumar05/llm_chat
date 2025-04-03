@@ -63,10 +63,8 @@ class Connection:
             await self.start_new_session()
 
         elif message_type == "set_tts":
-            print("enable_tts before", self.enable_tts)
-            value = message.get("value", False)
+            value = message.get("value", True)
             self.enable_tts[current_uuid] = value
-            print("enable_tts", self.enable_tts)
 
         elif message_type == "get_sessions":
             sessions = self.db.list_sessions()
@@ -75,6 +73,8 @@ class Connection:
         elif message_type == "get_transcripts":
             session_id = message.get("id")
             transcript = self.db.fetch_transcript(session_id)
+            context = self.db.get_context(session_id)
+            print("convo context", context, transcript)
             await self.frontend_ws.send_json(
                 {
                     "type": "transcripts",
@@ -140,7 +140,6 @@ class Connection:
                     file_name,
                 )
 
-                # print("response received", resp, f"{file_name=}")
                 await self.frontend_ws.send_json(
                     {"type": "transcript_item", "transcript_item": resp}
                 )
@@ -148,8 +147,8 @@ class Connection:
                 self.db.append_transcript(
                     current_uuid, {"query": resp["query"], "response": resp["response"]}
                 )
-                # if resp["context"]:
-                #     self.db.append_context(uuid, resp["context"])
+                if resp["context"]:
+                    self.db.append_context(current_uuid, resp["context"])
 
         else:
             await self.frontend_ws.send_json(
@@ -162,11 +161,14 @@ class Connection:
             buffer = bytearray()
             chunk_count = 0
 
-            if current_uuid not in self.enable_tts:
-                self.enable_tts[current_uuid] = False
+            # if current_uuid not in self.enable_tts:
+            #     self.enable_tts[current_uuid] = False
 
-            if not self.enable_tts.get(current_uuid, False):
-                print(f"tts response disabled, returning for {current_uuid=}", self.enable_tts)
+            if not self.enable_tts.get(current_uuid, True):
+                print(
+                    f"tts response disabled, returning for {current_uuid=}",
+                    self.enable_tts,
+                )
                 return
 
             await self.frontend_ws.send_json(

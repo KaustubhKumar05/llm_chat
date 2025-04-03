@@ -18,6 +18,7 @@ export const Sidebar = () => {
         <h1 className="text-2xl font-extrabold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
           Chats
         </h1>
+
         <button
           title="New chat"
           className="bg-blue-600 text-white p-2 rounded-full disabled:opacity-50 disabled:cursor-not-allowed"
@@ -27,6 +28,7 @@ export const Sidebar = () => {
           <MessageCirclePlus size={18} />
         </button>
       </div>
+
       <div className="border-t pt-1 mt-2">
         {[liveSession, ...sessions].map((session) => (
           <div
