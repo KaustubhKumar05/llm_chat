@@ -7,5 +7,7 @@
   - [x] Store and display transcripts
   - [ ] Rename chat
   - [ ] Text only toggle
-  - [ ] Scripting for specific flows
   - [ ] Error handling
+
+
+  - [ ] Scripting for specific flows

@@ -4,10 +4,10 @@ import {
   Trash,
   MicIcon,
   MicOffIcon,
-  Send,
-  CircleStop,
-  Volume2,
-  VolumeX,
+  // Send,
+  // CircleStop,
+  // Volume2,
+  // VolumeX,
   Info,
 } from "lucide-react";
 import useCustomStore from "../store";
@@ -34,7 +34,7 @@ export const Footer = () => {
     isRecording,
     deleteSession,
     isStreamingResponse,
-    stopStreamingResponse,
+    // stopStreamingResponse,
     getTranscripts,
     // setTTS,
   } = useConnection();
@@ -121,7 +121,7 @@ export const Footer = () => {
           style={{ bottom: "22px" }}
           className={`${
             isRecording ? "bg-red-600" : "bg-gray-800"
-          } text-white w-max p-2 rounded-full absolute right-12`}
+          } text-white w-max p-2 rounded-full absolute right-2`}
         >
           {isRecording ? (
             <MicIcon size={18} className="cursor-pointer" />
@@ -130,26 +130,17 @@ export const Footer = () => {
           )}
         </button>
 
-        {!isStreamingResponse ? (
-          <button
-            title="Send"
-            className="bg-gray-800 text-white w-max p-2 rounded-full absolute right-2"
-            onClick={() => sendMessage()}
-            style={{ bottom: "22px" }}
-          >
-            <Send size={18} className="cursor-pointer" />
-          </button>
-        ) : (
+        {/* {isStreamingResponse && (
           <button
             title="Stop audio"
             disabled={!isStreamingResponse}
             onClick={stopStreamingResponse}
             style={{ bottom: "22px" }}
-            className="bg-red-600 text-white w-max cursor-pointer p-2 rounded-full disabled:opacity-80 disabled:cursor-not-allowed right-2 absolute"
+            className="bg-red-600 text-white w-max cursor-pointer p-2 rounded-full disabled:opacity-80 disabled:cursor-not-allowed right-12 absolute"
           >
             <CircleStop size={18} />
           </button>
-        )}
+        )} */}
       </div>
     </div>
   );

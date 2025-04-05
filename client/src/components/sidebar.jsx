@@ -29,7 +29,10 @@ export const Sidebar = () => {
         </button>
       </div>
 
-      <div className="border-t pt-1 mt-2">
+      <div
+        className="border-t pt-1 mt-2 pr-2 -mr-2 overflow-y-auto"
+        style={{ height: "calc(100vh - 75px)" }}
+      >
         {[liveSession, ...sessions].map((session) => (
           <div
             className={`truncate my-2 p-2 rounded-2xl flex items-center hover:bg-blue-100/50 text-xs font-medium cursor-pointer ${

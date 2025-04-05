@@ -50,11 +50,11 @@ export const Messages = () => {
 const Message = ({ content, type }) => {
   const styling =
     type === "query"
-      ? "text-white bg-blue-500 ml-auto rounded-tr-none"
-      : "text-black bg-white rounded-tl-none";
+      ? "text-white bg-blue-500 ml-auto max-w-sm rounded-tr-none"
+      : "text-black bg-white rounded-tl-none leading-loose font-light max-w-lg";
   return (
     <p
-      className={`text-sm mb-3 w-max px-4 py-2 rounded-xl max-w-sm backdrop-blur-sm shadow-lg ${styling}`}
+      className={`text-sm mb-3 w-max px-4 py-2 rounded-xl backdrop-blur-sm shadow-lg ${styling}`}
     >
       {content}
     </p>

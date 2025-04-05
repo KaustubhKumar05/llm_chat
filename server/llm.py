@@ -60,12 +60,10 @@ class GeminiLLM(LLM):
                     "Last AI response: " + self.last_response[uuid],
                     "Context: " + self.context[uuid],
                 ],
-                # Cache the conversation structure
-                # Get checklist of required details each time, store as context
                 config={
                     "response_mime_type": "application/json",
                     "response_schema": TranscriptItem,
-                    "system_instruction": "You will be provided a text or audio prompt with some context and a last response so you remember the flow of the conversation. The prompts contain queries which you should respond to. The queries might refer to something in the context but not necessarily. Always return a summary as context of the current exchange only, not the past ones. Your response will be fed to a TTS engine so avoid asterisks and similar special characters. Make sure the context is succint while not losing any details",
+                    "system_instruction": "You will be provided a text or audio prompt with some context and a last response so you remember the flow of the conversation. The prompts contain queries which you should respond to. The queries might refer to something in the context but not necessarily. Always return a summary as context of the current exchange only, not the past ones. Your response will be fed to a TTS engine so avoid asterisks and similar special characters. Make sure the context is succint while not losing any details. Feel free to include emojis and write in paragraphs if the answer is too long to make things more readable and user friendly",
                 },
             )
 
@@ -77,7 +75,11 @@ class GeminiLLM(LLM):
             return jsonresp
         except Exception as e:
             self.logger.error("Error in generate_response: %s", str(e))
-            return {"query": "", "response": "Please try again later", "context": self.context[uuid]}
+            return {
+                "query": "",
+                "response": "Please try again later",
+                "context": self.context[uuid],
+            }
 
     def get_llm(self):
         return self
