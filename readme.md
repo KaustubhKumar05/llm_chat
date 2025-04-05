@@ -1,6 +1,8 @@
 ## Generic LLM interface
 
-Chat with audio response. The context and transcripts are preserved.
+Chat with audio response. 
+Push to talk or type. 
+The transcripts and contexts are preserved.
 
 - DB: Redis
 - LLM: Gemini 2.0, can be swapped. Currently it also manages STT
