@@ -13,7 +13,7 @@ export const Modal = ({ content, show, setShow, title }) => {
             onClick={() => setShow(false)}
             className="text-gray-500 hover:text-gray-700"
           >
-            <X size={24} />
+            <X size={24} className="cursor-pointer" />
           </button>
         </div>
         {content}

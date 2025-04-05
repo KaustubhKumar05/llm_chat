@@ -77,7 +77,7 @@ class GeminiLLM(LLM):
             return jsonresp
         except Exception as e:
             self.logger.error("Error in generate_response: %s", str(e))
-            return {"query": "An error occured", "response": "Please try again later"}
+            return {"query": "", "response": "Please try again later", "context": self.context[uuid]}
 
     def get_llm(self):
         return self

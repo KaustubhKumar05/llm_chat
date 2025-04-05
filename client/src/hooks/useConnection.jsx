@@ -114,6 +114,10 @@ export const ConnectionProvider = ({ children }) => {
                 break;
               case "uuid":
                 setTranscripts([]);
+                extendSessionTranscriptsMap({
+                  id: message.uuid,
+                  transcripts: [],
+                });
                 uuidRef.current = message.uuid || "";
                 setViewingSession(message.uuid);
                 setLiveSession(message.uuid);

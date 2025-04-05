@@ -35,10 +35,10 @@ class Connection:
         # ID to count map to keep track of each audio message
         self.user_identifier_map = {}
         self.kill_streaming = {}
-        self.enable_tts = {}
 
     async def start_new_session(self) -> None:
         user_identifier = str(uuid.uuid4())
+        print("\nStarting new session", user_identifier)
         self.user_identifier_map[user_identifier] = 0
         await self.frontend_ws.send_json({"type": "uuid", "uuid": user_identifier})
 
@@ -50,29 +50,24 @@ class Connection:
         await self.start_new_session()
 
     async def handle_message(self, message: Dict[str, Any]) -> None:
-        """Handle messages from frontend and route to appropriate service."""
+        """Handle incoming messages."""
         if not self.is_connected:
             raise RuntimeError("No active connection with frontend")
 
         message_type = message.get("type")
         current_uuid = message.get("uuid")
 
+        print(f"\n\ndebug> got message {message_type=}\n {message=}")
+
         match message_type:
             case "new_session":
                 await self.start_new_session()
-                return
-
-            case "set_tts":
-                value = message.get("value", True)
-                self.enable_tts[current_uuid] = value
-                return
 
             case "get_sessions":
                 sessions = self.db.list_sessions()
                 await self.frontend_ws.send_json(
                     {"type": "sessions", "sessions": sessions}
                 )
-                return
 
             case "get_transcripts":
                 session_id = message.get("id")
@@ -86,11 +81,9 @@ class Connection:
                         "session_id": session_id,
                     }
                 )
-                return
 
             case "kill_streaming":
                 self.kill_streaming[current_uuid] = True
-                return
 
             case "delete_session":
                 session_id = message.get("id")
@@ -98,7 +91,6 @@ class Connection:
                     await self.frontend_ws.send_json(
                         {"type": "session_deleted", "id": session_id}
                     )
-                return
 
             case "text" | "audio":
                 self._increment_uuid_counter(current_uuid)
@@ -118,35 +110,46 @@ class Connection:
                         decoded_audio = base64.b64decode(base64_data)
                         self.audio_buffer.extend(decoded_audio)
 
-                    if message.get("final", False):
+                    got_final_audio = message.get("final", False)
+                    if got_final_audio:
+                        print("Got final, writing to file:", file_name)
                         with open(file_name, "wb") as f:
                             f.write(bytes(self.audio_buffer))
-                        self.logger.debug("Saved audio file as %s", file_name)
                         self.audio_buffer.clear()
 
-                resp = self.llm.generate_response(
-                    current_uuid,
-                    text,
-                    file_name,
-                )
-
-                if message_type == "text":
-                    await self.frontend_ws.send_json(
-                        {"type": "transcript_item", "response": resp["response"], "context": resp["context"]}
-                    )
-                else:
-                    await self.frontend_ws.send_json(
-                        {"type": "transcript_item", "transcript_item": resp, "context": resp["context"]}
+                if text or got_final_audio:
+                    resp = self.llm.generate_response(
+                        current_uuid,
+                        text,
+                        file_name,
                     )
 
-                await self.stream_as_audio_response(current_uuid, resp["response"])
+                    if message_type == "text":
+                        await self.frontend_ws.send_json(
+                            {
+                                "type": "transcript_item",
+                                "response": resp["response"],
+                                "context": resp["context"],
+                            }
+                        )
+                    else:
+                        await self.frontend_ws.send_json(
+                            {
+                                "type": "transcript_item",
+                                "transcript_item": resp,
+                                "context": resp["context"],
+                            }
+                        )
 
-                self.db.append_transcript(
-                    current_uuid, {"query": resp["query"], "response": resp["response"]}
-                )
+                    await self.stream_as_audio_response(current_uuid, resp["response"])
 
-                if resp["context"]:
-                    self.db.update_context(current_uuid, resp["context"])
+                    self.db.append_transcript(
+                        current_uuid,
+                        {"query": resp["query"], "response": resp["response"]},
+                    )
+
+                    if resp["context"]:
+                        self.db.update_context(current_uuid, resp["context"])
 
             case _:
                 await self.frontend_ws.send_json(
@@ -161,16 +164,6 @@ class Connection:
         try:
             buffer = bytearray()
             chunk_count = 0
-
-            # if current_uuid not in self.enable_tts:
-            #     self.enable_tts[current_uuid] = False
-
-            # if not self.enable_tts.get(current_uuid, True):
-            #     print(
-            #         f"tts response disabled, returning for {current_uuid=}",
-            #         self.enable_tts,
-            #     )
-            #     return
 
             await self.frontend_ws.send_json(
                 {"type": "tts_start", "message": "Starting TTS processing"}
@@ -206,7 +199,6 @@ class Connection:
 
                 # The audio and pauses sound weird without any merging
                 if chunk_count >= self.tts_chunking_limit:
-                    await self.frontend_ws.send_json({"type": "tts_chunk"})
                     await self.frontend_ws.send_bytes(bytes(buffer))
                     buffer.clear()
                     chunk_count = 0
@@ -214,7 +206,6 @@ class Connection:
             # Send any remaining data in the buffer
             if buffer:
                 self.logger.debug("Sending final merged chunks")
-                await self.frontend_ws.send_json({"type": "tts_chunk_final"})
                 await self.frontend_ws.send_bytes(bytes(buffer))
                 buffer.clear()
                 chunk_count = 0

@@ -25,19 +25,21 @@ export const Messages = () => {
             ? "calc(100vh - 78px)"
             : "calc(100vh - 54px)",
       }}
-      className="max-w-3xl mx-auto pt-4 pr-2 w-full overflow-y-auto"
+      className="max-w-3xl mx-auto pt-4 w-full overflow-y-auto"
     >
       {isLoading ? (
         <Loader />
       ) : (
-        chatMessages.map((message, index) => (
-          <div key={index} className="p-2 rounded">
-            <Message content={message.query} type="query" />
-            {message.response && (
-              <Message content={message.response} type="response" />
-            )}
-          </div>
-        ))
+        <div className="pr-2 -mr-1">
+          {chatMessages.map((message, index) => (
+            <div key={index} className="p-2 rounded">
+              <Message content={message.query} type="query" />
+              {message.response && (
+                <Message content={message.response} type="response" />
+              )}
+            </div>
+          ))}
+        </div>
       )}
       {isThinking ? <Loader content="Thinking..." /> : ""}
       <div ref={finalRef} />

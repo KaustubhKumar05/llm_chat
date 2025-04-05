@@ -90,9 +90,10 @@ export const Footer = () => {
           style={{ top: "22px" }}
           className="bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50 text-white w-max p-2 rounded-full absolute left-2"
         >
-          <Info size={18} />
+          <Info size={18} className="cursor-pointer" />
         </button>
         <input
+          disabled={isStreamingResponse}
           className="border rounded-3xl text-sm border-gray-300 pl-12 pr-24 py-3 w-full shadow-sm focus:shadow-md outline-none focus:border-black"
           ref={inputRef}
           autoFocus
@@ -122,7 +123,11 @@ export const Footer = () => {
             isRecording ? "bg-red-600" : "bg-gray-800"
           } text-white w-max p-2 rounded-full absolute right-12`}
         >
-          {isRecording ? <MicIcon size={18} /> : <MicOffIcon size={18} />}
+          {isRecording ? (
+            <MicIcon size={18} className="cursor-pointer" />
+          ) : (
+            <MicOffIcon size={18} className="cursor-pointer" />
+          )}
         </button>
 
         {!isStreamingResponse ? (
@@ -132,7 +137,7 @@ export const Footer = () => {
             onClick={() => sendMessage()}
             style={{ bottom: "22px" }}
           >
-            <Send size={18} />
+            <Send size={18} className="cursor-pointer" />
           </button>
         ) : (
           <button
@@ -140,7 +145,7 @@ export const Footer = () => {
             disabled={!isStreamingResponse}
             onClick={stopStreamingResponse}
             style={{ bottom: "22px" }}
-            className="bg-red-600 text-white w-max p-2 rounded-full disabled:opacity-80 disabled:cursor-not-allowed right-2 absolute"
+            className="bg-red-600 text-white w-max cursor-pointer p-2 rounded-full disabled:opacity-80 disabled:cursor-not-allowed right-2 absolute"
           >
             <CircleStop size={18} />
           </button>
